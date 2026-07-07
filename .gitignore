@@ -1,0 +1,19 @@
+node_modules
+.next
+out
+build
+.DS_Store
+*.pem
+npm-debug.log*
+.env*.local
+.vercel
+next-env.d.ts
+legacy
+
+.vercel
+.env*
+
+# Local tool/config files — never commit (they can contain secrets)
+.claude/
+push-log.txt
+push-to-github.bat

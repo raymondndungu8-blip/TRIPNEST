@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang='en'><head><meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>TripNest PRD v1.0</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:900px;margin:40px auto;padding:0 32px;line-height:1.75;color:#111827;font-size:15px}
+h1{font-size:2.2rem;color:#0c4a6e;border-bottom:4px solid #00d4ff;padding-bottom:10px;margin-top:0}
+h2{font-size:1.35rem;color:#0891b2;border-bottom:1px solid #bae6fd;padding-bottom:6px;margin-top:2.5rem}
+h3{font-size:1.05rem;color:#1e40af;margin-top:1.5rem}
+table{border-collapse:collapse;width:100%;margin:1.2rem 0;font-size:0.9rem}
+th,td{border:1px solid #d1d5db;padding:9px 14px;text-align:left}
+th{background:#e0f2fe;font-weight:700;color:#0c4a6e}
+tr:nth-child(even){background:#f0f9ff}
+code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:0.85em;font-family:monospace;color:#1e293b}
+pre{background:#f1f5f9;padding:18px;border-radius:8px;overflow-x:auto;border-left:4px solid #00d4ff}
+pre code{background:none;padding:0;font-size:0.88em}
+ul,ol{margin:0.75rem 0;padding-left:1.8rem}
+li{margin:0.4rem 0}
+hr{border:none;border-top:2px solid #e5e7eb;margin:2.5rem 0}
+p{margin:0.75rem 0}
+strong{color:#1e40af}
+@media print{body{max-width:100%;margin:20px;font-size:13px}h2{page-break-after:avoid}}
+</style></head>
+<body><h1>TripNest — Product Requirements Document (PRD)</h1>
+
+<p><strong>Version:</strong> 1.0 (Working Prototype)</p>
+<p><strong>Owner:</strong> Raymond Ndungu — raymondndungu8@gmail.com</p>
+<p><strong>Last updated:</strong> 2026-07-01</p>
+<p><strong>Status:</strong> Deployed prototype — fully functional at https://tripnest-puce.vercel.app</p>
+<p><strong>Tech lead:</strong> Claude Sonnet 4.6 (Anthropic)</p>
+
+<hr>
+
+<h2>1. Vision</h2>
+
+<p>TripNest is a <strong>ride-booking and event-transport marketplace</strong> built for the Kenyan market.</p>
+<p>Customers pre-order drivers for scheduled rides, airport pickups, event travel, and shared</p>
+<p>rides instead of hailing on demand. Drivers receive structured, planned requests they can</p>
+<p>accept or reject.</p>
+
+<p><strong>Differentiators vs. generic ride-hailing:</strong></p>
+<ul><li>Planning-first: schedule rides ahead of time, not just now</li>
+<li>Event travel: book transport straight to festivals, concerts, runs</li>
+<li>Airport transfers: timed to flight departures — see the flight board, book a ride</li>
+<li>Trusted network: save favourite drivers; they appear first next time</li>
+<li>Direct communication: chat with your driver from the Inbox before pickup</li>
+<li>M-Pesa native: STK push payment triggered on arrival — no card needed</li>
+
+<hr>
+
+<h2>2. Personas</h2>
+
+<table><tr><td>Persona</td><td>Key needs</td><td>Primary actions</td></tr>
+<p>|---|---|---|</p>
+<tr><td><strong>Client</strong></td><td>Plan rides ahead, control budget, ride with trusted drivers, reach events, pay via M-Pesa</td><td>Sign up, book, track live, chat with drivers, favourite drivers</td></tr>
+<tr><td><strong>Driver</strong></td><td>Steady planned work, control availability, clear trip details, confirm payment on arrival</td><td>Sign up with vehicle, toggle online, accept/reject requests, start via OTP, confirm arrival for payment</td></tr>
+
+<hr>
+
+<h2>3. Feature inventory (built & deployed)</h2>
+
+<h3>3.1 Authentication</h3>
+
+<p>#### Clients</p>
+<li><strong>Email + password signup</strong> — collects name, email, phone, password (min 6 chars)</li>
+<li><strong>Google OAuth signup/login</strong> — one-tap, auto-creates client profile from Google metadata</li>
+<li><strong>Login page</strong> — email + password, forgot password (reset link via email), lockout after 5 failed attempts (30-second cooldown), password show/hide eye toggle</li>
+<li><strong>Password strength indicator</strong> — 4-segment visual bar on signup</li>
+<li><strong>Reset password page</strong> — set new password after email reset link, confirm field, eye toggles</li>
+<li><strong>Auto-profile creation</strong> — a Postgres trigger auto-creates the client row the instant the auth user is created (server-side, bypasses RLS timing issues)</li>
+<li><strong>Email verification</strong> — Supabase sends a confirmation email; redirect URL configured to <code>/login</code></li>
+
+<p>#### Drivers</p>
+<li><strong>Phone OTP login</strong> — WhatsApp OTP delivered via Twilio (or Africa's Talking SMS fallback)</li>
+<li><strong>Driver profile setup</strong> — multi-field form: name, phone, vehicle type, plate number, current location, frequent location, vehicle category (Standard / XL / Premium)</li>
+
+<hr>
+
+<h3>3.2 Landing page</h3>
+<li>Splash screen: TRIPNEST logo + tagline "better the driver you know."</li>
+<li>"Get Started" → client home (or signup if not logged in)</li>
+<li>"Join as a Driver" → driver signup</li>
+<li><strong>Onboarding carousel</strong> — 5 auto-scrolling slides explaining how the app works:</li>
+<p>  1. Book & schedule rides</p>
+<p>  2. Book rides to events</p>
+<p>  3. Airport transfers</p>
+<p>  4. Chat with your drivers (Inbox)</p>
+<p>  5. Save favourite drivers</p>
+<li>Version footer</li>
+
+<hr>
+
+<h3>3.3 Client home (booking screen)</h3>
+
+<p><strong>Top bar:</strong> menu icon | TRIPNEST | profile avatar</p>
+
+<p><strong>Ride Now / Schedule tabs:</strong> toggle between immediate and scheduled booking</p>
+
+<p><strong>Location fields:</strong></p>
+<li>Current Location (editable) — max 200 characters</li>
+<li>Where to? destination — max 200 characters</li>
+
+<p><strong>Ride type selector:</strong> Private | Cost sharing</p>
+<li>Transport budget field only appears when Cost sharing is selected</li>
+
+<p><strong>Nearby drivers panel:</strong> shows available drivers filtered by selected vehicle category (favourites first)</p>
+
+<p><strong>Vehicle selection cards (3 options):</strong></p>
+<tr><td>Vehicle</td><td>ETA</td><td>Seats</td><td>Est. fare</td></tr>
+<p>|---|---|---|---|</p>
+<tr><td>Luxury Sedan</td><td>4 min</td><td>4</td><td>Ksh 1,850</td></tr>
+<tr><td>Premium SUV</td><td>7 min</td><td>6</td><td>Ksh 3,200</td></tr>
+<tr><td>Executive Van</td><td>12 min</td><td>8</td><td>Ksh 5,400</td></tr>
+
+<p><strong>Confirm Booking</strong> button — creates the ride, sends WhatsApp verification code to client's phone</p>
+
+<p><strong>Active ride tracker</strong> (shown when a ride is in progress):</p>
+<li>ETA badge, Emergency/SOS button (calls 999 / 112)</li>
+<li>Real-time Google Maps-based map (dark mode via CSS filter) with animated route line + moving car marker</li>
+<li>Distance (km) and time-left (min) stats</li>
+<li>Status progress bar: Searching → Driver on the way → Trip in progress</li>
+<li>Driver card: name, vehicle, rating, message + call buttons</li>
+<li>Plate number badge</li>
+<li>OTP verification code display (Ride Now: shown immediately on booking, Schedule: shown on booking)</li>
+<li>M-Pesa payment status (pending PIN / paid with receipt)</li>
+<li>Share Status + Cancel Trip actions</li>
+
+<hr>
+
+<h3>3.4 Ride lifecycle & OTP flow</h3>
+
+<pre><code>Client books → ride is <code>requested</code> → OTP code shown to client immediately
+<p>                                   → OTP also sent to client's WhatsApp</p>
+<p>Driver accepts → ride is <code>accepted</code> → OTP message updates to "show driver at pickup"</p>
+<p>Driver enters OTP at pickup → ride moves to <code>in_progress</code></p>
+<p>Driver confirms arrival at destination → M-Pesa STK push sent to client's phone</p>
+<p>Client enters PIN → payment confirmed → ride marked <code>completed</code></p>
+<p></code></pre></p>
+
+<p><strong>Race safety:</strong> two drivers accepting simultaneously is handled by a conditional UPDATE — only one succeeds because the row must still be <code>requested</code> with <code>driver_id IS NULL</code>.</p>
+
+<hr>
+
+<h3>3.5 Events page</h3>
+
+<li>Top bar with search field</li>
+<li><strong>Airport Transfers</strong> entry card → links to Airport page</li>
+<li><strong>Upcoming Events</strong> list:</li>
+<p>  - Large banner image, "Trending" badge</p>
+<p>  - Event name, location (MapPin icon)</p>
+<p>  - DATE / DRIVERS columns</p>
+<p>  - EST. BUDGET (cyan)</p>
+<p>  - Driver avatar stack + overflow count</p>
+<p>  - "Book Ride" button → booking panel (same vehicle/ride-type/budget/schedule form)</p>
+
+<p>Seeded events (from Supabase):</p>
+<li>Summertides Festival — Mombasa, Watamu Coastal Arena</li>
+<li>Diani Beach Festival — Diani Beach</li>
+<li>Nairobi Night Run — Nairobi</li>
+
+<hr>
+
+<h3>3.6 Airport page</h3>
+
+<p>Accessed from Events page → Airport Transfers card.</p>
+
+<li>"Book a ride to the airport" general booking card</li>
+<li><strong>Upcoming Departures</strong> — mock flight board (7 flights):</li>
+<p>  - Kenya Airways, Emirates, Qatar Airways, Ethiopian Airlines, KLM, Turkish Airlines, South African Airways</p>
+<p>  - Shows: airline, flight number, departure time, destination city + country, terminal</p>
+<p>  - "Book ride for this flight" → booking panel with:</p>
+<p>    - Destination locked to <code>JKIA Terminal 1, Nairobi</code></p>
+<p>    - Pickup time defaulted to <strong>3 hours before departure</strong></p>
+
+<hr>
+
+<h3>3.7 Inbox (client-driver chat)</h3>
+
+<li><strong>Conversation list:</strong> all drivers you've ridden with or favourited, sorted by last message, showing last message preview + time ago</li>
+<li><strong>Chat view:</strong></li>
+<p>  - Message bubbles (cyan = you, dark = driver)</p>
+<p>  - Timestamps on each message</p>
+<p>  - Real-time updates via Supabase Realtime channel</p>
+<p>  - Message input (max 2000 characters) + send button</p>
+<p>  - DB-level rate limit: max 20 messages per sender per 60 seconds</p>
+
+<hr>
+
+<h3>3.8 Setup / Profile page</h3>
+
+<p><strong>Profile header:</strong> avatar (editable — take photo or choose from gallery, with circular crop tool), name, email, "Premium" badge, stats (Trips / Rating / Joined year)</p>
+
+<p><strong>Menu items:</strong></p>
+<li>Personal Information → edit name, email, phone (saved to DB)</li>
+<li>Payment Methods → M-Pesa (active, shows linked phone), Credit/Debit Card (coming soon), PayPal (coming soon)</li>
+<li>Ride History → all past rides with pickup/destination, driver, status, fare</li>
+<li>Safety Settings → emergency contact number, share-rides toggle (enables automatic status sharing with emergency contact), safety tips</li>
+<li>Help & Support → contact info (email, phone, WhatsApp hours), FAQ (6 expandable items)</li>
+
+<p><strong>Favourite Drivers list</strong> — tap heart to remove, shown with vehicle/plate/location</p>
+
+<p><strong>Log Out</strong> button</p>
+
+<hr>
+
+<h3>3.9 Driver dashboard</h3>
+
+<li>Welcome header + "Your performance index is up this week"</li>
+<li><strong>Active Alerts</strong> — incoming ride requests (with ACCEPT / DECLINE)</li>
+<li>Availability card (toggle online/offline)</li>
+<li>Stats: TODAY'S REVENUE | TOTAL RIDES | Completed</li>
+<li>Your trips (accepted / in-progress) — includes OTP entry to start ride, "Confirm arrival & request payment" button</li>
+<li>History — completed trips with payment status</li>
+
+<hr>
+
+<h3>3.10 Driver signup multi-step form</h3>
+
+<p>Fields: Full name (max 100) | Vehicle type (max 60) | Car plate (max 20) | Current location | Frequent operating location | Vehicle category (Standard / XL / Premium)</p>
+
+<hr>
+
+<h2>4. Data model (Supabase / Postgres)</h2>
+
+<h3>Core tables</h3>
+
+<pre><code>clients
+<p>  id uuid PK</p>
+<p>  user_id uuid FK auth.users (unique)</p>
+<p>  name text (1–100 chars)</p>
+<p>  phone text (≤20 chars)</p>
+<p>  email text (valid email format)</p>
+<p>  avatar_url text</p>
+<p>  emergency_contact text</p>
+<p>  share_rides boolean default false</p>
+<p>  created_at timestamptz</p>
+
+<p>drivers</p>
+<p>  id uuid PK</p>
+<p>  user_id uuid FK auth.users (unique)</p>
+<p>  name text (1–100 chars)</p>
+<p>  phone text</p>
+<p>  vehicle_type text (1–60 chars)</p>
+<p>  plate_number text (1–20 chars)</p>
+<p>  current_location text</p>
+<p>  frequent_location text</p>
+<p>  vehicle_category enum(standard|xl|premium)</p>
+<p>  is_available boolean default false</p>
+<p>  created_at timestamptz</p>
+
+<p>events</p>
+<p>  id uuid PK</p>
+<p>  name text</p>
+<p>  location text</p>
+<p>  event_date date</p>
+<p>  estimated_budget numeric</p>
+<p>  image_url text</p>
+<p>  created_at timestamptz</p>
+
+<p>rides</p>
+<p>  id uuid PK</p>
+<p>  client_id uuid FK clients</p>
+<p>  driver_id uuid FK drivers (nullable)</p>
+<p>  event_id uuid FK events (nullable)</p>
+<p>  pickup text (1–200 chars)</p>
+<p>  destination text (1–200 chars)</p>
+<p>  scheduled_at timestamptz</p>
+<p>  vehicle_category enum(standard|xl|premium)</p>
+<p>  ride_type enum(private|cost_sharing)</p>
+<p>  budget numeric (1–1,000,000)</p>
+<p>  status enum(requested|accepted|in_progress|rejected|completed|cancelled)</p>
+<p>  rejected_by uuid[]</p>
+<p>  verification_code text (4-digit, generated on insert)</p>
+<p>  payment_status enum(unpaid|pending|paid|failed)</p>
+<p>  mpesa_receipt text</p>
+<p>  created_at timestamptz</p>
+
+<p>favorites</p>
+<p>  id uuid PK</p>
+<p>  client_id uuid FK clients</p>
+<p>  driver_id uuid FK drivers</p>
+<p>  created_at timestamptz</p>
+<p>  UNIQUE (client_id, driver_id)</p>
+
+<p>messages</p>
+<p>  id uuid PK</p>
+<p>  client_id uuid FK clients</p>
+<p>  driver_id uuid FK drivers</p>
+<p>  sender_type enum(client|driver)</p>
+<p>  content text (1–2,000 chars)</p>
+<p>  created_at timestamptz</p>
+
+<p>payments</p>
+<p>  id uuid PK</p>
+<p>  ride_id uuid FK rides</p>
+<p>  client_id uuid FK clients</p>
+<p>  amount numeric</p>
+<p>  phone text</p>
+<p>  merchant_request_id text</p>
+<p>  checkout_request_id text</p>
+<p>  status enum(pending|success|failed)</p>
+<p>  mpesa_receipt text</p>
+<p>  result_code integer</p>
+<p>  result_desc text</p>
+<p>  created_at timestamptz</p>
+<p></code></pre></p>
+
+<h3>Realtime</h3>
+<code>rides</code>, <code>drivers</code>, <code>favorites</code>, <code>messages</code> are subscribed via Supabase Realtime.
+
+<hr>
+
+<h2>5. Edge functions (Supabase)</h2>
+
+<tr><td>Function</td><td>Purpose</td><td>Auth</td></tr>
+<p>|---|---|---|</p>
+<tr><td><code>mpesa-stk</code></td><td>Trigger M-Pesa STK push. Validates caller is the assigned driver, amount taken from DB (not client input), phone validated against client's record</td><td>JWT required</td></tr>
+<tr><td><code>mpesa-callback</code></td><td>Receives Safaricom webhook, marks ride paid/failed</td><td>Public (Safaricom webhook)</td></tr>
+<tr><td><code>send-ride-code</code></td><td>Sends WhatsApp verification code to client on booking</td><td>JWT required</td></tr>
+<tr><td><code>send-sms</code></td><td>Auth hook — delivers OTP for driver phone login</td><td>Webhook-signature verified</td></tr>
+
+<hr>
+
+<h2>6. Security model</h2>
+
+<h3>Database</h3>
+<li><strong>RLS enabled</strong> on all tables — every table uses Row Level Security</li>
+<li><strong>Scoped policies</strong>: clients see only their own data; drivers see theirs; open requests visible to all available drivers</li>
+<li><strong>Payment field protection trigger</strong> (<code>rides_protect_sensitive_columns</code>): blocks client/driver sessions from directly modifying <code>payment_status</code>, <code>mpesa_receipt</code>, <code>budget</code>, <code>verification_code</code>, <code>client_id</code> — only service-role (edge functions) can change these</li>
+<li><strong>Server-side rate limiting triggers:</strong></li>
+<p>  - Messages: max 20 per sender per 60 seconds</p>
+<p>  - Rides: max 5 new ride requests per client per 10 minutes</p>
+<p>  - Favourites: max 10 adds per client per 5 minutes</p>
+<li><strong>Input validation CHECK constraints</strong> on all user-supplied text fields (length bounds, email format)</li>
+<li><strong>Avatar storage scoped</strong> to <code>{user_id}/avatar.{ext}</code> path — users cannot overwrite each other's photos</li>
+
+<h3>Edge functions</h3>
+<li>All secrets stored as Supabase Edge Function secrets — no hardcoded credentials in source</li>
+<li><code>send-sms</code> auth hook: signature verification is mandatory (fails closed if <code>SEND_SMS_HOOK_SECRET</code> not configured)</li>
+<li><code>mpesa-stk</code>: driver ownership, ride state, and phone/amount all re-derived from DB server-side</li>
+
+<h3>Frontend / HTTP</h3>
+<li><strong>Security headers</strong> (set via <code>next.config.mjs</code>):</li>
+<p>  - <code>X-Frame-Options: DENY</code></p>
+<p>  - <code>X-Content-Type-Options: nosniff</code></p>
+<p>  - <code>Referrer-Policy: strict-origin-when-cross-origin</code></p>
+<p>  - <code>Permissions-Policy: camera=(self), geolocation=(self), microphone=()</code></p>
+<p>  - <code>Strict-Transport-Security: max-age=63072000; includeSubDomains; preload</code></p>
+<p>  - <code>Content-Security-Policy</code> (restricts scripts, styles, connections, frames)</p>
+<li><strong>Login brute-force protection</strong>: client-side lockout after 5 failed attempts (30-second cooldown with countdown)</li>
+<li><strong>No dangerouslySetInnerHTML</strong> usage — all user content rendered via React (XSS-safe by default)</li>
+
+<hr>
+
+<h2>7. Tech stack</h2>
+
+<tr><td>Layer</td><td>Technology</td></tr>
+<p>|---|---|</p>
+<tr><td>Framework</td><td>Next.js 15 (App Router) + TypeScript</td></tr>
+<tr><td>Styling</td><td>Tailwind CSS v3 — dark cyan theme (<code>#00d4ff</code> accent, <code>#060a13</code> background)</td></tr>
+<tr><td>Animation</td><td>Framer Motion (spring micro-interactions, drag gestures)</td></tr>
+<tr><td>Map</td><td>MapLibre GL with Google Maps raster tiles (dark mode via CSS filter)</td></tr>
+<tr><td>Image crop</td><td>react-easy-crop (circular avatar cropper)</td></tr>
+<tr><td>Backend / DB</td><td>Supabase (Postgres + Realtime + Edge Functions + Storage)</td></tr>
+<tr><td>Auth</td><td>Supabase Auth — email/password + Google OAuth (clients), Phone OTP via Twilio WhatsApp (drivers)</td></tr>
+<tr><td>Payments</td><td>M-Pesa Daraja STK Push (Safaricom Kenya)</td></tr>
+<tr><td>Messaging</td><td>Twilio WhatsApp API / Africa's Talking SMS</td></tr>
+<tr><td>Hosting</td><td>Vercel (auto-deploys from CLI)</td></tr>
+<tr><td>Fonts</td><td>Inter (body) + Sora (display headings)</td></tr>
+
+<hr>
+
+<h2>8. Design system</h2>
+
+<li><strong>Colour:</strong> Dark navy backgrounds (<code>#060a13</code> / <code>#0c1222</code>), cyan accent <code>#00d4ff</code></li>
+<li><strong>Typography:</strong> Sora for headings (display), Inter for body text</li>
+<li><strong>Cards:</strong> glass-morphism surfaces, <code>1.25rem</code> border radius, subtle cyan border tint</li>
+<li><strong>Motion:</strong> spring physics transitions (stiffness 120–350, damping 16–30)</li>
+<li><strong>Mobile-first:</strong> 375px baseline, max-width 448px container, 44px touch targets</li>
+<li><strong>Bottom navigation:</strong> 4 tabs — Home | Events | Inbox | Setup</li>
+<li><strong>Accessibility:</strong> 4.5:1 contrast minimum, reduced-motion respected, visible focus rings</li>
+<p></ul></p>
+<hr>
+
+<h2>9. User flows</h2>
+
+<h3>Client booking</h3>
+<pre><code>Land on splash → Get Started → Log in (email/password or Google)
+<p>→ Home screen → Enter destination → Select vehicle</p>
+<p>→ Choose ride type (Private or Cost sharing)</p>
+<p>→ [Cost sharing only] Enter budget</p>
+<p>→ Confirm Booking</p>
+<p>→ WhatsApp receives OTP code</p>
+<p>→ Active ride tracker shows: map, ETA, driver info</p>
+<p>→ At pickup: share OTP with driver</p>
+<p>→ Driver enters OTP → ride starts</p>
+<p>→ Driver confirms arrival → M-Pesa PIN prompt on phone</p>
+<p>→ Enter PIN → ride completed → option to favourite driver</p>
+<p></code></pre></p>
+
+<h3>Driver flow</h3>
+<pre><code>Sign up (phone OTP) → fill vehicle form → offline by default
+<p>→ Toggle availability ON</p>
+<p>→ New request appears (pickup, destination, budget, type)</p>
+<p>→ ACCEPT (locks ride) or DECLINE (passes to next driver)</p>
+<p>→ Navigate to pickup → ask client for OTP code</p>
+<p>→ Enter OTP → ride starts (in_progress)</p>
+<p>→ Arrive at destination → "Confirm arrival & request KES X"</p>
+<p>→ Client's M-Pesa PIN prompt fires → payment confirmed</p>
+<p>→ Ride marked completed</p>
+<p></code></pre></p>
+
+<hr>
+
+<h2>10. Live deployment</h2>
+
+<tr><td>Resource</td><td>URL / ID</td></tr>
+<p>|---|---|</p>
+<tr><td>Production app</td><td>https://tripnest-puce.vercel.app</td></tr>
+<tr><td>Vercel project</td><td>tripnest (raymondndungu8-1154s-projects)</td></tr>
+<tr><td>Supabase project</td><td>frqlxatryxlsjntzqdgn</td></tr>
+<tr><td>Supabase URL</td><td>https://frqlxatryxlsjntzqdgn.supabase.co</td></tr>
+
+<hr>
+
+<h2>11. Roadmap</h2>
+
+<tr><td>Phase</td><td>Adds</td></tr>
+<p>|---|---|</p>
+<tr><td><strong>P1 — current (done)</strong></td><td>Auth, booking, realtime accept/reject, OTP verification, M-Pesa, events, airport, inbox, favourites, setup/profile, security hardening</td></tr>
+<tr><td><strong>P2 — Driver chat</strong></td><td>Drivers can also see and reply from their own Inbox view</td></tr>
+<tr><td><strong>P3 — Ratings</strong></td><td>Post-ride star ratings both ways; displayed on driver cards</td></tr>
+<tr><td><strong>P4 — Push notifications</strong></td><td>Native push (web push / PWA) for new ride requests, messages, payment confirmation</td></tr>
+<tr><td><strong>P5 — GPS & live tracking</strong></td><td>Live driver location on map, turn-by-turn ETA, real distance/time from routing API</td></tr>
+<tr><td><strong>P6 — Matching</strong></td><td>Distance/ETA-based driver matching (closest available driver first), surge pricing</td></tr>
+<tr><td><strong>P7 — Admin dashboard</strong></td><td>Ride analytics, revenue reporting, user management, event management</td></tr>
+<tr><td><strong>P8 — PWA / mobile app</strong></td><td>Installable PWA, push notifications, offline support</td></tr>
+<p></table></p>
+<hr>
+
+<h2>12. Environment variables required</h2>
+
+<h3>Vercel (Next.js)</h3>
+<pre><code>NEXT_PUBLIC_SUPABASE_URL
+<p>NEXT_PUBLIC_SUPABASE_ANON_KEY</p>
+<p></code></pre></p>
+
+<h3>Supabase Edge Function secrets</h3>
+<pre><code>TWILIO_ACCOUNT_SID
+<p>TWILIO_AUTH_TOKEN</p>
+<p>TWILIO_WHATSAPP_FROM</p>
+<p>SEND_SMS_HOOK_SECRET</p>
+<p>MPESA_CONSUMER_KEY</p>
+<p>MPESA_CONSUMER_SECRET</p>
+<p>MPESA_SHORTCODE          (default: 174379 in sandbox)</p>
+<p>MPESA_ENV                (sandbox | production)</p>
+<p>MPESA_CALLBACK_URL       (defaults to mpesa-callback function URL)</p>
+<p></code></pre></p>
+
+<hr>
+
+<p><em>TripNest — better the driver you know.</em></p></body></html>
