@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, CalendarHeart, Route, UserCircle, Car, Clock, Wallet } from "lucide-react";
+import { Home, CalendarHeart, Route, UserCircle, MessageCircle } from "lucide-react";
 import { useSession } from "@/components/providers/session-provider";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ const CLIENT_TABS = [
 const DRIVER_TABS = [
   { href: "/driver", label: "Home", icon: Home },
   { href: "/driver/trips", label: "Trips", icon: Route },
-  { href: "/events", label: "Events", icon: CalendarHeart },
+  { href: "/driver/inbox", label: "Inbox", icon: MessageCircle },
   { href: "/driver/profile", label: "Profile", icon: UserCircle },
 ];
 
