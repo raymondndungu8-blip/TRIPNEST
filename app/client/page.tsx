@@ -36,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RideCard } from "@/components/ride/ride-card";
 import { FadeIn, StaggerList, MotionItem, fadeUp } from "@/components/motion/motion";
 import { RideMap } from "@/components/ride/ride-map-dynamic";
+import { DriverMap } from "@/components/client/driver-map-dynamic";
 import { ActiveRideTracker } from "@/components/ride/active-ride-tracker";
 import { RequireRole } from "@/components/auth/require-role";
 import { DriverListItem } from "@/components/client/driver-list-item";
@@ -774,6 +775,20 @@ function ClientDashboard() {
           </p>
         </div>
       )}
+
+      {/* Live driver map */}
+      <div className="mb-3 flex items-center justify-between">
+        <h4 className="text-sm font-medium text-foreground">Drivers near you</h4>
+        <span className="text-xs text-muted-foreground">Live · online in green</span>
+      </div>
+      <div className="mb-5">
+        <DriverMap
+          client={client}
+          category={selectedVehicle}
+          pickup={pickup}
+          pickupCoords={pickupCoords}
+        />
+      </div>
 
       {/* Nearby drivers */}
       <div className="mb-5">

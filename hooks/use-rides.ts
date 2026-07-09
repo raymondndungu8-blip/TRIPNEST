@@ -7,7 +7,7 @@ import {
   fetchDriverRides,
   fetchOpenRequests,
 } from "@/lib/rides";
-import { fetchAvailableDrivers } from "@/lib/favorites";
+import { fetchAvailableDrivers, fetchMapDrivers } from "@/lib/favorites";
 import type { Driver, RideWithRelations, VehicleCategory } from "@/lib/types";
 
 /**
@@ -134,6 +134,69 @@ export function useRealtimeDrivers(
     refetch();
     const channel = supabase
       .channel(`drivers-${clientId}-${category ?? "all"}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "drivers" },
+        () => refetch()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, category, refetch]);
+
+  return { drivers, loading, refetch };
+}
+
+/**
+ * Realtime drivers for the client's live map — online drivers plus the
+ * client's favorites (online or offline). Refetches whenever any `drivers`
+ * row changes, so markers flip online/offline the moment a driver toggles.
+ */
+export function useNearbyDrivers(
+  clientId: string | null | undefined,
+  category?: VehicleCategory
+) {
+  const [drivers, setDrivers] = useState<
+    { driver: Driver; isFavorite: boolean }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const clientIdRef = useRef(clientId);
+  clientIdRef.current = clientId;
+  const categoryRef = useRef(category);
+  categoryRef.current = category;
+
+  const refetch = useCallback(async () => {
+    if (!clientIdRef.current) {
+      setDrivers([]);
+      setLoading(false);
+      return;
+    }
+    try {
+      const data = await fetchMapDrivers(
+        clientIdRef.current,
+        categoryRef.current
+      );
+      setDrivers(data);
+    } catch (err) {
+      console.error("[useNearbyDrivers] fetch failed", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!clientId) {
+      setDrivers([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    refetch();
+    const channel = supabase
+      .channel(`nearby-${clientId}-${category ?? "all"}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "drivers" },
