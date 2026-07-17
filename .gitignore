@@ -17,3 +17,9 @@ legacy
 .claude/
 push-log.txt
 push-to-github.bat
+
+# Build artifacts
+tsconfig.tsbuildinfo
+
+# Contains hardcoded API keys — never commit
+nvidiaStream.js
