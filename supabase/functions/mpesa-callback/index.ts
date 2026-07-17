@@ -3,6 +3,7 @@
 
 const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const MPESA_CALLBACK_SECRET = Deno.env.get("MPESA_CALLBACK_SECRET") || "";
 
 function svc(prefer: string) {
   return {
@@ -12,6 +13,34 @@ function svc(prefer: string) {
     Prefer: prefer,
   };
 }
+
+function verifyCallbackSignature(body: string, signature: string | null): boolean {
+  if (!MPESA_CALLBACK_SECRET) {
+    console.warn("[mpesa-callback] MPESA_CALLBACK_SECRET not set — skipping verification");
+    return true;
+  }
+  if (!signature) return false;
+
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(MPESA_CALLBACK_SECRET);
+  const data = encoder.encode(body);
+
+  return crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  ).then((key) =>
+    crypto.subtle.sign("HMAC", key, data).then((sig) => {
+      const calculated = Array.from(new Uint8Array(sig))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      return calculated === signature;
+    })
+  ).catch(() => false);
+}
+
 function accepted() {
   return new Response(JSON.stringify({ ResultCode: 0, ResultDesc: "Accepted" }), {
     headers: { "Content-Type": "application/json" },
@@ -20,7 +49,18 @@ function accepted() {
 
 Deno.serve(async (req) => {
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+    const signature = req.headers.get("X-Mpesa-Signature") || req.headers.get("x-mpesa-signature");
+
+    if (MPESA_CALLBACK_SECRET) {
+      const isValid = await verifyCallbackSignature(rawBody, signature);
+      if (!isValid) {
+        console.error("[mpesa-callback] Invalid callback signature — possible tampering");
+        return accepted();
+      }
+    }
+
+    const body = JSON.parse(rawBody);
     console.log("[mpesa-callback] body:", JSON.stringify(body));
     const cb = body?.Body?.stkCallback;
     if (!cb) return accepted();

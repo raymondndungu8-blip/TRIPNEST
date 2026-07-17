@@ -1,4 +1,5 @@
 import * as otpauth from 'otpauth'
+import crypto from 'crypto'
 
 export interface TwoFactorSecret {
   secret: string
@@ -44,7 +45,7 @@ export function generateBackupCodes(count: number = 8): string[] {
   const codes: string[] = []
   for (let i = 0; i < count; i++) {
     const code = Array.from({ length: 8 }, () =>
-      Math.floor(Math.random() * 10).toString()
+      crypto.randomInt(0, 10).toString()
     ).join('')
     codes.push(`${code.slice(0, 4)}-${code.slice(4)}`)
   }
@@ -53,11 +54,6 @@ export function generateBackupCodes(count: number = 8): string[] {
 
 export function hashBackupCode(code: string): string {
   const cleaned = code.replace('-', '')
-  let hash = 0
-  for (let i = 0; i < cleaned.length; i++) {
-    const char = cleaned.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash
-  }
-  return Math.abs(hash).toString(36)
+  const salt = process.env.BACKUP_CODE_SALT || 'tripnest-default-salt'
+  return crypto.createHash('sha256').update(`${salt}:${cleaned}`).digest('hex')
 }

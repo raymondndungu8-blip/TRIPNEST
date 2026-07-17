@@ -1,4 +1,5 @@
 import Africastalking from 'africastalking'
+import crypto from 'crypto'
 
 let africastalkingInstance: ReturnType<typeof Africastalking> | null = null
 
@@ -54,5 +55,5 @@ export async function sendPaymentAlert(
 }
 
 export function generateOtp(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  return crypto.randomInt(100000, 999999).toString()
 }

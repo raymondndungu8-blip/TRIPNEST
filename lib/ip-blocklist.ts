@@ -1,24 +1,34 @@
-const blockedIps = new Set<string>()
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+)
+
 const suspiciousIps = new Map<string, { count: number; lastSeen: number }>()
 
-const BLOCKED_IP_FILE = process.env.BLOCKED_IP_FILE || ''
-
-export function isIpBlocked(ip: string): boolean {
-  return blockedIps.has(ip)
+export async function isIpBlocked(ip: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('blocked_ips')
+    .select('ip')
+    .eq('ip', ip)
+    .single()
+  return !!data
 }
 
-export function blockIp(ip: string, reason?: string): void {
-  blockedIps.add(ip)
+export async function blockIp(ip: string, reason?: string): Promise<void> {
+  await supabase.from('blocked_ips').upsert({ ip, reason: reason || 'manual', blocked_at: new Date().toISOString() })
   console.log(`[IP BLOCK] Blocked ${ip}. Reason: ${reason || 'manual'}`)
 }
 
-export function unblockIp(ip: string): void {
-  blockedIps.delete(ip)
+export async function unblockIp(ip: string): Promise<void> {
+  await supabase.from('blocked_ips').delete().eq('ip', ip)
   console.log(`[IP UNBLOCK] Unblocked ${ip}`)
 }
 
-export function getBlockedIps(): string[] {
-  return Array.from(blockedIps)
+export async function getBlockedIps(): Promise<string[]> {
+  const { data } = await supabase.from('blocked_ips').select('ip')
+  return (data || []).map((row: { ip: string }) => row.ip)
 }
 
 export function trackSuspiciousActivity(ip: string): boolean {
