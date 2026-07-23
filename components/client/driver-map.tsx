@@ -59,26 +59,39 @@ async function geocodeDriver(driver: Driver): Promise<LngLat | null> {
   return [base[0] + dx, base[1] + dy];
 }
 
-function driverMarkerEl(online: boolean): HTMLDivElement {
+function driverMarkerEl(online: boolean, distanceKm: number): HTMLDivElement {
   const el = document.createElement("div");
-  el.style.width = "30px";
-  el.style.height = "30px";
-  el.style.display = "grid";
-  el.style.placeItems = "center";
-  el.style.borderRadius = "9999px";
+  el.style.display = "flex";
+  el.style.alignItems = "center";
+  el.style.gap = "6px";
   el.style.cursor = "pointer";
-  if (online) {
-    el.style.background = "linear-gradient(135deg,#22c55e,#15803d)";
-    el.style.boxShadow =
-      "0 0 0 3px rgba(34,197,94,0.35), 0 4px 12px rgba(0,0,0,0.6)";
-    el.style.animation = "pulse-dot 1.8s ease-in-out infinite";
-  } else {
-    el.style.background = "linear-gradient(135deg,#64748b,#334155)";
-    el.style.boxShadow = "0 0 0 3px rgba(100,116,139,0.3)";
-    el.style.opacity = "0.85";
-  }
-  el.innerHTML =
-    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M6 17l1.5-5h9L18 17M7 12l1-3h8l1 3"/><circle cx="8" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/></svg>';
+  el.style.filter = online ? "none" : "saturate(0.7)";
+  el.innerHTML = `
+    <span style="
+      width:32px;
+      height:32px;
+      display:grid;
+      place-items:center;
+      border-radius:9999px;
+      background:${online ? "linear-gradient(135deg,#22c55e,#15803d)" : "linear-gradient(135deg,#64748b,#334155)"};
+      box-shadow:${online ? "0 0 0 4px rgba(34,197,94,0.28), 0 8px 18px rgba(0,0,0,0.65)" : "0 0 0 4px rgba(100,116,139,0.26), 0 8px 18px rgba(0,0,0,0.55)"};
+      ${online ? "animation:pulse-dot 1.8s ease-in-out infinite;" : "opacity:.86;"}
+    ">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M6 17l1.5-5h9L18 17M7 12l1-3h8l1 3"/><circle cx="8" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/></svg>
+    </span>
+    <span style="
+      white-space:nowrap;
+      border-radius:9999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(2,6,23,.78);
+      color:${online ? "#eaffff" : "#cbd5e1"};
+      padding:5px 8px;
+      font:700 11px system-ui,sans-serif;
+      letter-spacing:.01em;
+      box-shadow:0 8px 22px rgba(0,0,0,.45);
+      backdrop-filter:blur(10px);
+    ">${distanceKm.toFixed(1)} km</span>
+  `;
   return el;
 }
 
@@ -236,7 +249,7 @@ export function DriverMap({
           closeButton: false,
         }).setHTML(popupHtml(p.driver, p.distanceKm));
         const marker = new maplibregl.Marker({
-          element: driverMarkerEl(p.driver.is_available),
+          element: driverMarkerEl(p.driver.is_available, p.distanceKm),
         })
           .setLngLat(p.coord)
           .setPopup(popup)
@@ -273,17 +286,17 @@ export function DriverMap({
   }, [points]);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-border bg-surface">
-      <div ref={containerRef} className="h-64 w-full" />
+    <div className="relative w-full overflow-hidden rounded-[1.35rem] border border-cyan-400/15 bg-[#050912] shadow-[0_18px_55px_rgba(0,0,0,0.45)]">
+      <div ref={containerRef} className="h-[252px] w-full" />
 
       {/* Nearby banner */}
       <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex items-center justify-between gap-2">
         <span
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold backdrop-blur",
+            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold shadow-[0_10px_26px_rgba(0,0,0,0.45)] backdrop-blur-md",
             stats.nearby > 0
-              ? "bg-success/85 text-white"
-              : "bg-background/75 text-muted-foreground"
+              ? "border-emerald-300/20 bg-emerald-500/75 text-white"
+              : "border-white/10 bg-background/78 text-muted-foreground"
           )}
         >
           {stats.nearby > 0 ? (
@@ -307,7 +320,7 @@ export function DriverMap({
       </div>
 
       {/* Legend */}
-      <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex items-center gap-3 rounded-xl bg-background/75 px-3 py-1.5 text-[11px] font-medium text-foreground backdrop-blur">
+      <div className="pointer-events-none absolute inset-x-4 bottom-3 z-10 flex items-center gap-3 rounded-xl border border-white/10 bg-[#060a13]/78 px-3 py-2 text-[12px] font-semibold text-foreground shadow-[0_10px_28px_rgba(0,0,0,0.42)] backdrop-blur-md">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e]" />
           Online
@@ -323,7 +336,7 @@ export function DriverMap({
       </div>
 
       {!ready && !failed && (
-        <div className="absolute inset-0 z-0 grid place-items-center bg-surface">
+        <div className="absolute inset-0 z-0 grid place-items-center bg-[#050912]">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <MapPin className="h-4 w-4 animate-pulse text-accent" />
             Finding drivers near you…
@@ -332,7 +345,7 @@ export function DriverMap({
       )}
 
       {failed && (
-        <div className="absolute inset-0 z-0 grid place-items-center bg-surface px-6 text-center">
+        <div className="absolute inset-0 z-0 grid place-items-center bg-[#050912] px-6 text-center">
           <p className="text-xs text-muted-foreground">Map unavailable</p>
         </div>
       )}

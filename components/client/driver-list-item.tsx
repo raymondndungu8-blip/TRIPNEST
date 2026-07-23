@@ -24,9 +24,9 @@ export function DriverListItem({
   return (
     <motion.div
       variants={fadeUp}
-      className="card flex items-center gap-3 p-3.5"
+      className="flex items-center gap-3 rounded-[1.35rem] border border-cyan-400/10 bg-[#10192b]/82 p-3.5 shadow-[0_14px_40px_rgba(0,0,0,0.28)] backdrop-blur"
     >
-      <Avatar name={driver.name} size={44} />
+      <Avatar name={driver.name} size={52} className="shadow-[0_0_26px_rgba(0,212,255,0.35)]" />
       <div className="min-w-0 flex-1 leading-tight">
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-semibold text-foreground">
@@ -51,10 +51,10 @@ export function DriverListItem({
         aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
         aria-pressed={isFavorite}
         className={cn(
-          "grid h-11 w-11 shrink-0 place-items-center rounded-xl border transition-colors disabled:opacity-50",
+          "grid h-12 w-12 shrink-0 place-items-center rounded-2xl border transition-colors disabled:opacity-50",
           isFavorite
-            ? "border-destructive/30 bg-destructive/10 text-destructive"
-            : "border-border bg-surface-2/60 text-muted-foreground hover:text-foreground"
+            ? "border-destructive/30 bg-destructive/15 text-destructive"
+            : "border-cyan-400/10 bg-[#0b1424]/70 text-muted-foreground hover:text-foreground"
         )}
       >
         <Heart className={cn("h-5 w-5", isFavorite && "fill-current")} />
