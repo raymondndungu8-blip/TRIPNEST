@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidPassenger(data) {
+      return data.keys().hasAll(['id', 'name', 'phone', 'email', 'tripsCount', 'rating', 'premium', 'avatarUrl', 'isRegistered'])
+        && data.keys().size() == 9
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.phone is string && data.phone.size() <= 30
+        && data.email is string && data.email.size() <= 100
+        && data.tripsCount is int
+        && data.rating is number && data.rating >= 0 && data.rating <= 5
+        && data.premium is bool
+        && data.avatarUrl is string && data.avatarUrl.size() <= 500
+        && data.isRegistered is bool;
+    }
+
+    function isValidDriver(data) {
+      return data.keys().hasAll(['id', 'name', 'phone', 'vehicleType', 'carPlate', 'currentLocation', 'frequentLocation', 'category', 'rating', 'tripsCount', 'isOnline', 'isFavorite', 'avatarUrl', 'isRegistered'])
+        && data.keys().size() == 14
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 100
+        && data.phone is string && data.phone.size() <= 30
+        && data.vehicleType is string && data.vehicleType.size() <= 100
+        && data.carPlate is string && data.carPlate.size() <= 20
+        && data.currentLocation is string && data.currentLocation.size() <= 100
+        && data.frequentLocation is string && data.frequentLocation.size() <= 100
+        && (data.category == 'Standard' || data.category == 'XL' || data.category == 'Premium')
+        && data.rating is number && data.rating >= 0 && data.rating <= 5
+        && data.tripsCount is int
+        && data.isOnline is bool
+        && data.isFavorite is bool
+        && data.avatarUrl is string && data.avatarUrl.size() <= 500
+        && data.isRegistered is bool;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll(['id', 'pickup', 'destination', 'dateTime', 'budget', 'category', 'rideType', 'status', 'rejectedDriverIds', 'availableDriverPool', 'originalPrice'])
+        && data.id is string && data.id.size() <= 128
+        && data.pickup is string && data.pickup.size() <= 200
+        && data.destination is string && data.destination.size() <= 200
+        && data.dateTime is string && data.dateTime.size() <= 100
+        && data.budget is number && data.budget >= 0
+        && (data.category == 'Standard' || data.category == 'XL' || data.category == 'Premium')
+        && (data.rideType == 'Private' || data.rideType == 'Cost Sharing')
+        && (data.status == 'searching' || data.status == 'accepted' || data.status == 'en_route' || data.status == 'completed' || data.status == 'cancelled' || data.status == 'rejected_by_all')
+        && data.rejectedDriverIds is list
+        && data.availableDriverPool is list
+        && data.originalPrice is number;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['id', 'bookingId', 'userId', 'amount', 'currency', 'method', 'status', 'createdAt'])
+        && data.id is string && data.id.size() <= 128
+        && data.bookingId is string && data.bookingId.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.amount is number && data.amount >= 0
+        && (data.currency == 'USD' || data.currency == 'KES')
+        && (data.method == 'mpesa' || data.method == 'card' || data.method == 'cash')
+        && (data.status == 'pending' || data.status == 'completed' || data.status == 'failed' || data.status == 'refunded')
+        && data.createdAt is string;
+    }
+
+    match /passengers/{passengerId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && passengerId == request.auth.uid && isValidPassenger(incoming());
+      allow update: if isSignedIn() && passengerId == request.auth.uid && isValidPassenger(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'email', 'avatarUrl', 'isRegistered', 'premium'])
+      );
+    }
+
+    match /drivers/{driverId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidDriver(incoming());
+      allow update: if isSignedIn() && isValidDriver(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasAny(['isOnline', 'currentLocation', 'frequentLocation', 'rating', 'tripsCount', 'isFavorite'])
+      );
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidBooking(incoming());
+
+      allow update: if isSignedIn() && isValidBooking(incoming()) && (
+        existing().status != 'completed' &&
+        existing().status != 'cancelled' &&
+        existing().status != 'rejected_by_all'
+      ) && (
+        (incoming().status == 'cancelled' && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+        (incoming().status == 'accepted' && incoming().diff(existing()).affectedKeys().hasOnly(['driverId', 'status'])) ||
+        (incoming().status == 'en_route' && incoming().diff(existing()).affectedKeys().hasOnly(['driverId', 'status'])) ||
+        (incoming().driverId == null && incoming().diff(existing()).affectedKeys().hasOnly(['driverId', 'rejectedDriverIds'])) ||
+        (incoming().status == 'searching' && incoming().diff(existing()).affectedKeys().hasOnly(['driverId', 'availableDriverPool', 'status'])) ||
+        (incoming().status == 'completed' && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+        (incoming().status == 'rejected_by_all' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+      );
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn() && (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.driverId);
+      allow create: if isSignedIn() && request.auth.uid == incoming().userId && isValidTransaction(incoming());
+      allow update: if isSignedIn() && (request.auth.uid == incoming().userId);
+    }
+  }
+}

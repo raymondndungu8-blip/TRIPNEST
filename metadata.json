@@ -1,0 +1,8 @@
+{
+  "name": "TripNest",
+  "description": "High-fidelity urban mobility guide with upcoming Kilifi and Nairobi music events bookings, priority favorite driver assignment routing, and interactive driver dispatcher and cascading portals.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

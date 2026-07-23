@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0A0A0A;
+  --color-surface-dim: #121317;
+  --color-surface-container-lowest: #0d0e12;
+  --color-surface-container-low: #1a1b1f;
+  --color-surface-container: #1e1f23;
+  --color-surface-container-high: #292a2e;
+  --color-surface-container-highest: #343539;
+  
+  --color-on-surface: #e3e2e7;
+  --color-on-surface-variant: #c1c6d7;
+  --color-inverse-surface: #e3e2e7;
+  --color-inverse-on-surface: #2f3034;
+  --color-outline: #8b90a0;
+  --color-outline-variant: #414755;
+  
+  --color-primary: #007AFF;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #4b8eff;
+  --color-on-primary-container: #00285c;
+  
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro", "SF Pro Text", "Inter", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Inter", system-ui, sans-serif;
+}
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "SF Pro Text", "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(.33); opacity: 0.8; }
+  80%, 100% { opacity: 0; }
+}
+
+.map-gradient-overlay {
+  background: radial-gradient(circle at center, transparent 30%, #0A0A0A 100%);
+}
+
+.glass-panel {
+  background: rgba(28, 28, 30, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.pulse-marker {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  background-color: #007AFF;
+  border-radius: 50%;
+}
+
+.pulse-marker::before {
+  content: '';
+  position: absolute;
+  display: block;
+  width: 300%;
+  height: 300%;
+  box-sizing: border-box;
+  margin-left: -100%;
+  margin-top: -100%;
+  border-radius: 45px;
+  background-color: #007AFF;
+  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes shimmer-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer-bar {
+  animation: shimmer-bar 2.0s infinite linear;
+}

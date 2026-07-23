@@ -1,0 +1,108 @@
+{
+  "entities": {
+    "Passenger": {
+      "title": "Passenger Profile",
+      "description": "Information about a passenger user of Tripnest",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "User UID from Firebase Authentication" },
+        "name": { "type": "string", "description": "Passenger's full name" },
+        "phone": { "type": "string", "description": "Contact phone number" },
+        "email": { "type": "string", "description": "Email address" },
+        "tripsCount": { "type": "integer", "description": "Number of completed rides" },
+        "rating": { "type": "number", "description": "Average rating given by drivers" },
+        "premium": { "type": "boolean", "description": "True if passenger is registered under dynamic premium privileges" },
+        "avatarUrl": { "type": "string", "description": "Profile picture URL" },
+        "isRegistered": { "type": "boolean", "description": "True if signup profile registration is complete" }
+      },
+      "required": ["id", "name", "phone", "email", "tripsCount", "rating", "premium", "avatarUrl", "isRegistered"]
+    },
+    "Driver": {
+      "title": "Driver Profile",
+      "description": "Details about our specialized vehicle guides and their ratings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Driver identifier key" },
+        "name": { "type": "string", "description": "Driver's name" },
+        "phone": { "type": "string", "description": "Driver's phone number" },
+        "vehicleType": { "type": "string", "description": "Vehicle make and model description" },
+        "carPlate": { "type": "string", "description": "Vehicle license plate" },
+        "currentLocation": { "type": "string", "description": "Current visual landmark location on map" },
+        "frequentLocation": { "type": "string", "description": "Preferred service operational area" },
+        "category": { "type": "string", "enum": ["Standard", "XL", "Premium"], "description": "Vehicle capacity classification tier" },
+        "rating": { "type": "number", "description": "Driver's performance rating out of 5 stars" },
+        "tripsCount": { "type": "integer", "description": "Cumulative guide services delivered" },
+        "isOnline": { "type": "boolean", "description": "Online and active status indicator" },
+        "isFavorite": { "type": "boolean", "description": "Client marked favorite flag (local context sync)" },
+        "avatarUrl": { "type": "string", "description": "Driver profile photo URL" },
+        "isRegistered": { "type": "boolean", "description": "Indicates registration state" }
+      },
+      "required": ["id", "name", "phone", "vehicleType", "carPlate", "currentLocation", "frequentLocation", "category", "rating", "tripsCount", "isOnline", "isFavorite", "avatarUrl", "isRegistered"]
+    },
+    "Booking": {
+      "title": "Booking Request",
+      "description": "Details about an active or historical ride dispatch request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique auto-generated booking request identifier ID" },
+        "eventId": { "type": "string", "description": "Linked calendar event identifier" },
+        "eventName": { "type": "string", "description": "Visual name of event being traveled to" },
+        "pickup": { "type": "string", "description": "Rider departure pickup coordinates" },
+        "destination": { "type": "string", "description": "Calculated goal coordinates" },
+        "dateTime": { "type": "string", "description": "Combined reservation schedule timestamp" },
+        "budget": { "type": "number", "description": "Allocated transportation fee budget in USD" },
+        "category": { "type": "string", "enum": ["Standard", "XL", "Premium"], "description": "Selected vehicle tier level requested" },
+        "rideType": { "type": "string", "enum": ["Private", "Cost Sharing"], "description": "Private exclusive ride or community rate sharing" },
+        "driverId": { "type": "string", "description": "UID of assigned driver or null if searching" },
+        "status": { "type": "string", "enum": ["searching", "accepted", "en_route", "completed", "cancelled", "rejected_by_all"], "description": "Booking lifecycle execution tracker node" },
+        "rejectedDriverIds": { "type": "array", "description": "Pool array tracking driver rejects" },
+        "availableDriverPool": { "type": "array", "description": "Array of drivers that are part of cascade eligibility" },
+        "originalPrice": { "type": "number", "description": "Base calculated fare quote before premiums" },
+        "paymentMethod": { "type": "string", "enum": ["mpesa", "card", "cash"], "description": "Selected payment method for the trip" },
+        "paymentStatus": { "type": "string", "enum": ["unpaid", "pending", "paid", "failed", "refunded"], "description": "Payment lifecycle status" },
+        "transactionId": { "type": "string", "description": "Reference to the Transaction document ID" },
+        "mpesaPhone": { "type": "string", "description": "M-Pesa phone number used for payment" }
+      },
+      "required": ["id", "pickup", "destination", "dateTime", "budget", "category", "rideType", "status", "rejectedDriverIds", "availableDriverPool", "originalPrice"]
+    },
+    "Transaction": {
+      "title": "Payment Transaction",
+      "description": "Record of a payment transaction via M-Pesa or card",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique transaction identifier" },
+        "bookingId": { "type": "string", "description": "Associated booking ID" },
+        "userId": { "type": "string", "description": "Passenger user UID who paid" },
+        "driverId": { "type": "string", "description": "Driver UID who received payment" },
+        "amount": { "type": "number", "description": "Transaction amount" },
+        "currency": { "type": "string", "enum": ["USD", "KES"], "description": "Currency code" },
+        "method": { "type": "string", "enum": ["mpesa", "card", "cash"], "description": "Payment method used" },
+        "mpesaReceiptCode": { "type": "string", "description": "M-Pesa transaction receipt code (e.g. QWE1234R5T)" },
+        "stripePaymentIntentId": { "type": "string", "description": "Stripe PaymentIntent ID" },
+        "status": { "type": "string", "enum": ["pending", "completed", "failed", "refunded"], "description": "Transaction status" },
+        "description": { "type": "string", "description": "Human-readable description of the transaction" },
+        "createdAt": { "type": "string", "description": "ISO timestamp when transaction was created" },
+        "completedAt": { "type": "string", "description": "ISO timestamp when transaction was completed" }
+      },
+      "required": ["id", "bookingId", "userId", "amount", "currency", "method", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/passengers/{passengerId}": {
+      "schema": "Passenger",
+      "description": "Passenger client user credentials and profiles"
+    },
+    "/drivers/{driverId}": {
+      "schema": "Driver",
+      "description": "Specialized vehicle category operators and locations"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Rideshare bookings and historical dispatches"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Payment transaction records for auditing"
+    }
+  }
+}
