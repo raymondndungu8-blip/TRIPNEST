@@ -7,9 +7,10 @@ import {
   useEffect,
   useState,
 } from "react";
-import type { User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { signOut as authSignOut } from "@/lib/auth";
+import { getDocument, docs } from "@/lib/db";
 import type { Client, Driver, Role } from "@/lib/types";
 
 const ROLE_KEY = "tripnest_role";
@@ -58,15 +59,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setRole(null);
         return;
       }
-      const [{ data: c }, { data: d }] = await Promise.all([
-        supabase.from("clients").select("*").eq("user_id", u.id).maybeSingle(),
-        supabase.from("drivers").select("*").eq("user_id", u.id).maybeSingle(),
+      const [c, d] = await Promise.all([
+        getDocument<Client>(docs.client(u.uid)),
+        getDocument<Driver>(docs.driver(u.uid)),
       ]);
-      const clientRow = (c as Client | null) ?? null;
-      const driverRow = (d as Driver | null) ?? null;
-      setClientState(clientRow);
-      setDriverState(driverRow);
-      setRole(resolveRole(clientRow, driverRow));
+      setClientState(c);
+      setDriverState(d);
+      setRole(resolveRole(c, d));
     },
     [resolveRole]
   );
@@ -74,24 +73,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
 
-    async function handle(u: User | null) {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (!active) return;
-      setUser(u);
-      await loadProfiles(u);
+      setUser(fbUser);
+      await loadProfiles(fbUser);
       if (active) setLoading(false);
-    }
-
-    supabase.auth.getSession().then(({ data }) => {
-      handle(data.session?.user ?? null);
-    });
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      handle(session?.user ?? null);
     });
 
     return () => {
       active = false;
-      sub.subscription.unsubscribe();
+      unsubscribe();
     };
   }, [loadProfiles]);
 
@@ -114,12 +105,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const refreshDriver = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from("drivers")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (data) setDriverState(data as Driver);
+    const data = await getDocument<Driver>(docs.driver(user.uid));
+    if (data) setDriverState(data);
   }, [user]);
 
   const logout = useCallback(async () => {

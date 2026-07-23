@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { onSnapshot } from "firebase/firestore";
+import { collections } from "@/lib/db";
 import {
   fetchClientRides,
   fetchDriverRides,
@@ -45,17 +46,13 @@ function useRealtimeRides(
       return;
     }
     refetch();
-    const channel = supabase
-      .channel(`rides-${channelKey}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "rides" },
-        () => refetch()
-      )
-      .subscribe();
+    const unsub = onSnapshot(
+      collections.rides(),
+      () => refetch()
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      unsub();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelKey, refetch, !!fetcher]);
@@ -132,17 +129,13 @@ export function useRealtimeDrivers(
     }
     setLoading(true);
     refetch();
-    const channel = supabase
-      .channel(`drivers-${clientId}-${category ?? "all"}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "drivers" },
-        () => refetch()
-      )
-      .subscribe();
+    const unsub = onSnapshot(
+      collections.drivers(),
+      () => refetch()
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      unsub();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, category, refetch]);
@@ -195,17 +188,13 @@ export function useNearbyDrivers(
     }
     setLoading(true);
     refetch();
-    const channel = supabase
-      .channel(`nearby-${clientId}-${category ?? "all"}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "drivers" },
-        () => refetch()
-      )
-      .subscribe();
+    const unsub = onSnapshot(
+      collections.drivers(),
+      () => refetch()
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      unsub();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, category, refetch]);

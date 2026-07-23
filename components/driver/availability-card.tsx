@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { supabase } from "@/lib/supabase";
+import { patchDocument, docs } from "@/lib/db";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { Switch } from "@/components/ui/switch";
@@ -19,11 +19,7 @@ export function AvailabilityCard({ driver }: { driver: Driver }) {
     if (updating) return;
     setUpdating(true);
     try {
-      const { error } = await supabase
-        .from("drivers")
-        .update({ is_available: next })
-        .eq("id", driver.id);
-      if (error) throw error;
+      await patchDocument(docs.driver(driver.id), { isAvailable: next });
       await refreshDriver();
       toast(
         next ? "You're online — requests incoming" : "You're now offline",

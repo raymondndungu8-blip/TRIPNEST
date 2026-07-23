@@ -41,7 +41,7 @@ import { useToast } from "@/components/providers/toast-provider";
 import { fetchFavoriteDrivers, removeFavorite } from "@/lib/favorites";
 import { fetchClientRides } from "@/lib/rides";
 import { uploadAvatar, updateClientAvatar } from "@/lib/storage";
-import { supabase } from "@/lib/supabase";
+import { getDocument, setDocument, patchDocument, queryDocuments, collections, docs, where, Timestamp } from "@/lib/db";
 import { cn, formatKES, formatDateTime, friendlyErrorMessage } from "@/lib/utils";
 import { VEHICLE_CATEGORIES } from "@/lib/types";
 import type {
@@ -104,15 +104,11 @@ function PersonalInfoPanel({
     }
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("clients")
-        .update({
-          name: name.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
-        })
-        .eq("id", client.id);
-      if (error) throw error;
+      await patchDocument(docs.client(client.id), {
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+      });
       toast("Profile updated", "success");
     } catch {
       toast("Could not update profile", "error");
@@ -373,14 +369,10 @@ function SafetyPanel({
   async function handleSave() {
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("clients")
-        .update({
-          emergency_contact: emergency.trim() || null,
-          share_rides: shareRides,
-        })
-        .eq("id", client.id);
-      if (error) throw error;
+      await patchDocument(docs.client(client.id), {
+        emergencyContact: emergency.trim() || null,
+        shareRides: shareRides,
+      });
       toast("Safety settings updated", "success");
     } catch {
       toast("Could not save settings", "error");
@@ -638,25 +630,21 @@ function BecomeDriverPanel({
     if (!validate() || !user) return;
     setSubmitting(true);
     try {
-      const { data, error } = await supabase
-        .from("drivers")
-        .insert({
-          user_id: user.id,
-          name: form.name.trim(),
-          phone: client.phone ?? "",
-          vehicle_type: form.vehicle_type.trim(),
-          plate_number: form.plate_number.trim(),
-          current_location: form.current_location.trim(),
-          frequent_location: form.frequent_location.trim(),
-          vehicle_category: form.vehicle_category,
-          is_available: false,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setDriver(data as Driver);
+      await setDocument(docs.driver(user.uid), {
+        userId: user.uid,
+        name: form.name.trim(),
+        phone: client.phone ?? "",
+        vehicleType: form.vehicle_type.trim(),
+        plateNumber: form.plate_number.trim(),
+        currentLocation: form.current_location.trim(),
+        frequentLocation: form.frequent_location.trim(),
+        vehicleCategory: form.vehicle_category,
+        isAvailable: false,
+        createdAt: Timestamp.now(),
+      });
+      const data = await getDocument<Driver>(docs.driver(user.uid));
+      if (!data) throw new Error("Could not create driver profile");
+      setDriver(data);
       toast("You're now a TripNest driver!", "success");
       router.push("/driver");
     } catch (err) {
@@ -794,12 +782,9 @@ function ProfileStats({ client }: { client: Client }) {
   const joinedYear = new Date(client.created_at).getFullYear();
 
   useEffect(() => {
-    supabase
-      .from("rides")
-      .select("id", { count: "exact", head: true })
-      .eq("client_id", client.id)
-      .eq("status", "completed")
-      .then(({ count }) => setTripCount(count ?? 0));
+    queryDocuments(collections.rides(), where("clientId", "==", client.id), where("status", "==", "completed"))
+      .then((rides) => setTripCount(rides.length))
+      .catch(() => {});
   }, [client.id]);
 
   return (

@@ -1,28 +1,26 @@
-import { supabase } from "./supabase";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage"
+import { app } from "./firebase"
+import { docs, patchDocument } from "./db"
+
+const storage = getStorage(app)
 
 export async function uploadAvatar(
   userId: string,
   file: File
 ): Promise<string> {
-  const ext = file.name.split(".").pop() ?? "jpg";
-  const path = `${userId}/avatar.${ext}`;
+  const ext = file.name.split(".").pop() ?? "jpg"
+  const path = `avatars/${userId}/avatar.${ext}`
+  const storageRef = ref(storage, path)
 
-  const { error } = await supabase.storage
-    .from("avatars")
-    .upload(path, file, { upsert: true });
-  if (error) throw error;
+  await uploadBytes(storageRef, file)
+  const url = await getDownloadURL(storageRef)
 
-  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-  return `${data.publicUrl}?t=${Date.now()}`;
+  return `${url}?t=${Date.now()}`
 }
 
 export async function updateClientAvatar(
   clientId: string,
   avatarUrl: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("clients")
-    .update({ avatar_url: avatarUrl })
-    .eq("id", clientId);
-  if (error) throw error;
+  await patchDocument(docs.client(clientId), { avatarUrl })
 }

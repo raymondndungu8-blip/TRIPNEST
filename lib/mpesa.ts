@@ -1,5 +1,3 @@
-import { supabase } from "./supabase";
-
 export interface PayInput {
   ride_id: string;
 }
@@ -11,32 +9,31 @@ export interface PayResult {
   error?: string;
 }
 
-/**
- * Trigger an M-Pesa STK Push (PIN prompt on the customer's phone) via the
- * mpesa-stk edge function. The amount and phone are derived server-side from
- * the ride record — the function no longer accepts them from the client, so
- * only `ride_id` is sent. The mpesa-callback function later flips the ride's
- * payment_status to paid/failed (picked up live by useClientRides).
- */
 export async function payWithMpesa(input: PayInput): Promise<PayResult> {
-  const { data, error } = await supabase.functions.invoke("mpesa-stk", {
-    body: input,
-  });
+  try {
+    const response = await fetch("/api/mpesa-stk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
 
-  if (error) {
-    let message = "Could not start the M-Pesa payment. Please try again.";
-    // supabase-js attaches the failed Response as error.context
-    try {
-      const ctx = (error as { context?: Response }).context;
-      if (ctx && typeof ctx.json === "function") {
-        const body = await ctx.json();
-        if (body?.error) message = body.error;
+    if (!response.ok) {
+      let message = "Could not start the M-Pesa payment. Please try again."
+      try {
+        const body = await response.json()
+        if (body?.error) message = body.error
+      } catch {
+        /* keep default message */
       }
-    } catch {
-      /* keep default message */
+      return { ok: false, error: message }
     }
-    return { ok: false, error: message };
-  }
 
-  return data as PayResult;
+    const data = await response.json()
+    return data as PayResult
+  } catch (error) {
+    return {
+      ok: false,
+      error: "Could not start the M-Pesa payment. Please try again.",
+    }
+  }
 }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarX, Search, Bell, Plane, ChevronRight } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { queryDocuments, collections, where, orderBy } from "@/lib/db";
 import { createRide } from "@/lib/rides";
 import { friendlyErrorMessage } from "@/lib/utils";
 import { useSession } from "@/components/providers/session-provider";
@@ -36,19 +36,14 @@ export default function EventsPage() {
   useEffect(() => {
     let active = true;
     async function load() {
-      const [eventsRes, driversRes] = await Promise.all([
-        supabase.from("events").select("*").order("event_date", { ascending: true }),
-        supabase
-          .from("drivers")
-          .select("id, name, vehicle_type", { count: "exact" })
-          .eq("is_available", true),
+      const [eventsData, driversData] = await Promise.all([
+        queryDocuments<EventItem>(collections.events(), orderBy("eventDate", "asc")),
+        queryDocuments<DriverPreview>(collections.drivers(), where("isAvailable", "==", true)),
       ]);
       if (!active) return;
-      setEvents((eventsRes.data ?? []) as EventItem[]);
-      setDriverCount(driversRes.count ?? driversRes.data?.length ?? 0);
-      setDriverPreviews(
-        ((driversRes.data ?? []) as DriverPreview[]).slice(0, 3)
-      );
+      setEvents(eventsData);
+      setDriverCount(driversData.length);
+      setDriverPreviews(driversData.slice(0, 3));
       setLoading(false);
     }
     load();
@@ -77,13 +72,13 @@ export default function EventsPage() {
       }
       try {
         await createRide({
-          client_id: client.id,
-          event_id: activeEvent.id,
+          clientId: client.id,
+          eventId: activeEvent.id,
           pickup: values.pickup,
           destination: activeEvent.location,
-          scheduled_at: values.scheduledAt,
-          vehicle_category: values.vehicleCategory,
-          ride_type: values.rideType,
+          scheduledAt: values.scheduledAt,
+          vehicleCategory: values.vehicleCategory,
+          rideType: values.rideType,
           budget: values.budget,
         });
         toast(`Ride to ${activeEvent.name} requested!`, "success");

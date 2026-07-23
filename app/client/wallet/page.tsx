@@ -16,7 +16,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RequireRole } from "@/components/auth/require-role";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
-import { supabase } from "@/lib/supabase";
+import { onSnapshot, query } from "firebase/firestore";
+import { db } from "@/lib/firestore";
+import { collections, where, orderBy } from "@/lib/db";
 import {
   fetchConversations,
   fetchMessages,
@@ -70,44 +72,25 @@ function ChatView({
   }, []);
 
   useEffect(() => {
-    let active = true;
-    async function load() {
-      try {
-        const msgs = await fetchMessages(clientId, driverId);
-        if (active) {
-          setMessages(msgs);
-          setLoading(false);
-          setTimeout(scrollToBottom, 100);
-        }
-      } catch {
-        if (active) setLoading(false);
+    const q = query(
+      collections.messages(),
+      where("clientId", "==", clientId),
+      where("driverId", "==", driverId),
+      orderBy("createdAt", "asc")
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Message[];
+        setMessages(msgs);
+        setLoading(false);
+        setTimeout(scrollToBottom, 100);
+      },
+      () => {
+        setLoading(false);
       }
-    }
-    load();
-    return () => { active = false; };
-  }, [clientId, driverId, scrollToBottom]);
-
-  useEffect(() => {
-    const channel = supabase
-      .channel(`chat-${clientId}-${driverId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `client_id=eq.${clientId}`,
-        },
-        (payload) => {
-          const msg = payload.new as Message;
-          if (msg.driver_id === driverId) {
-            setMessages((prev) => [...prev, msg]);
-            setTimeout(scrollToBottom, 50);
-          }
-        }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    );
+    return () => unsub();
   }, [clientId, driverId, scrollToBottom]);
 
   async function handleSend(e: React.FormEvent) {
@@ -164,7 +147,7 @@ function ChatView({
         ) : (
           <div className="space-y-2 px-1">
             {messages.map((msg) => {
-              const isMe = msg.sender_type === "client";
+              const isMe = msg.senderType === "client";
               return (
                 <motion.div
                   key={msg.id}
@@ -185,7 +168,7 @@ function ChatView({
                         isMe ? "text-background/60" : "text-muted-foreground"
                       }`}
                     >
-                      {formatTime(msg.created_at)}
+                      {formatTime(msg.createdAt)}
                     </p>
                   </div>
                 </motion.div>

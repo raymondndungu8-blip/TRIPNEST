@@ -598,17 +598,17 @@ function ClientDashboard() {
     setSubmitting(true);
     try {
       const ride = await createRide({
-        client_id: client!.id,
+        clientId: client!.id,
         pickup: trimmedPickup,
         destination: trimmedDestination,
-        scheduled_at:
+        scheduledAt:
           mode === "schedule" && scheduledAt
             ? new Date(scheduledAt).toISOString()
             : null,
-        vehicle_category: selectedVehicle,
-        ride_type: rideType,
+        vehicleCategory: selectedVehicle,
+        rideType: rideType,
         budget: finalBudget,
-        event_id: null,
+        eventId: null,
       });
       toast("Ride booked — finding you a driver", "success");
 

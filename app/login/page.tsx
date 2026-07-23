@@ -13,8 +13,9 @@ import { FadeIn } from "@/components/motion/motion";
 import { FullPageSpinner } from "@/components/ui/spinner";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
+import { auth } from "@/lib/firebase";
 import { signInWithEmail, resetPassword, signInWithGoogle } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { getDocument, docs } from "@/lib/db";
 import { friendlyErrorMessage } from "@/lib/utils";
 
 const MAX_ATTEMPTS = 5;
@@ -80,23 +81,14 @@ export default function LoginPage() {
       setFailedAttempts(0);
       toast("Welcome back!", "success");
 
-      // Fetch session and redirect directly
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: c } = await supabase
-          .from("clients")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+      const fbUser = auth.currentUser;
+      if (fbUser) {
+        const c = await getDocument(docs.client(fbUser.uid));
         if (c) {
           router.replace("/client");
           return;
         }
-        const { data: d } = await supabase
-          .from("drivers")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+        const d = await getDocument(docs.driver(fbUser.uid));
         if (d) {
           router.replace("/driver");
           return;

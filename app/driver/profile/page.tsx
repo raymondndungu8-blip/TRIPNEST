@@ -35,7 +35,7 @@ import { useToast } from "@/components/providers/toast-provider";
 import { AvailabilityCard } from "@/components/driver/availability-card";
 import { BecomeRiderModal } from "@/components/driver/become-rider-modal";
 import { fetchDriverRides } from "@/lib/rides";
-import { supabase } from "@/lib/supabase";
+import { patchDocument, queryDocuments, collections, docs, where } from "@/lib/db";
 import { cn, formatKES, formatDateTime, friendlyErrorMessage } from "@/lib/utils";
 import { VEHICLE_CATEGORIES } from "@/lib/types";
 import type { Driver, RideWithRelations, VehicleCategory } from "@/lib/types";
@@ -89,19 +89,15 @@ function PersonalInfoPanel({
     }
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("drivers")
-        .update({
-          name: name.trim(),
-          phone: phone.trim(),
-          vehicle_type: vehicleType.trim(),
-          plate_number: plate.trim(),
-          current_location: current.trim() || null,
-          frequent_location: frequent.trim() || null,
-          vehicle_category: category,
-        })
-        .eq("id", driver.id);
-      if (error) throw error;
+      await patchDocument(docs.driver(driver.id), {
+        name: name.trim(),
+        phone: phone.trim(),
+        vehicleType: vehicleType.trim(),
+        plateNumber: plate.trim(),
+        currentLocation: current.trim() || null,
+        frequentLocation: frequent.trim() || null,
+        vehicleCategory: category,
+      });
       await refreshDriver();
       toast("Profile updated", "success");
     } catch (err) {
@@ -475,12 +471,9 @@ function ProfileStats({ driver }: { driver: Driver }) {
   const joinedYear = new Date(driver.created_at).getFullYear();
 
   useEffect(() => {
-    supabase
-      .from("rides")
-      .select("id", { count: "exact", head: true })
-      .eq("driver_id", driver.id)
-      .eq("status", "completed")
-      .then(({ count }) => setTripCount(count ?? 0));
+    queryDocuments(collections.rides(), where("driverId", "==", driver.id), where("status", "==", "completed"))
+      .then((rides) => setTripCount(rides.length))
+      .catch(() => {});
   }, [driver.id]);
 
   return (

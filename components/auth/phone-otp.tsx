@@ -62,6 +62,7 @@ export function PhoneOtp({
   if (phase === "phone") {
     return (
       <form onSubmit={handleSend} className="space-y-4">
+        <div id="recaptcha-container" />
         <Field
           label="Phone number"
           htmlFor="phone"

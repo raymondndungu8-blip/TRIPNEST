@@ -10,9 +10,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.45.4",
     "africastalking": "^0.7.9",
     "clsx": "^2.1.1",
+    "firebase": "^12.16.0",
     "framer-motion": "^11.5.4",
     "helmet": "^8.3.0",
     "lucide-react": "^0.441.0",

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Car, ShieldCheck } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getDocument, setDocument, docs, Timestamp } from "@/lib/db";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { AppShell } from "@/components/layout/app-shell";
@@ -89,25 +89,21 @@ export default function DriverSignupPage() {
     if (!validate() || !user) return;
     setSubmitting(true);
     try {
-      const { data, error } = await supabase
-        .from("drivers")
-        .insert({
-          user_id: user.id,
-          name: form.name.trim(),
-          phone: user.phone ? `+${user.phone}` : "",
-          vehicle_type: form.vehicle_type.trim(),
-          plate_number: form.plate_number.trim(),
-          current_location: form.current_location.trim(),
-          frequent_location: form.frequent_location.trim(),
-          vehicle_category: form.vehicle_category,
-          is_available: false,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setDriver(data as Driver);
+      await setDocument(docs.driver(user.uid), {
+        userId: user.uid,
+        name: form.name.trim(),
+        phone: user.phoneNumber ?? "",
+        vehicleType: form.vehicle_type.trim(),
+        plateNumber: form.plate_number.trim(),
+        currentLocation: form.current_location.trim(),
+        frequentLocation: form.frequent_location.trim(),
+        vehicleCategory: form.vehicle_category,
+        isAvailable: false,
+        createdAt: Timestamp.now(),
+      });
+      const data = await getDocument<Driver>(docs.driver(user.uid));
+      if (!data) throw new Error("Could not create driver profile");
+      setDriver(data);
       toast("Welcome to TripNest!", "success");
       router.push("/driver");
     } catch (err) {
@@ -143,7 +139,7 @@ export default function DriverSignupPage() {
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div className="flex items-center gap-2 rounded-xl border border-success/25 bg-success/10 px-3.5 py-2.5 text-sm text-success">
               <ShieldCheck className="h-4 w-4" />
-              {user.phone ? `+${user.phone}` : "Phone"} verified
+              {user.phoneNumber ?? "Phone"} verified
             </div>
 
             <Field label="Full name" htmlFor="name" required error={errors.name}>

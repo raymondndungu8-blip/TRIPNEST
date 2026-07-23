@@ -13,26 +13,23 @@ import { FadeIn } from "@/components/motion/motion";
 import { FullPageSpinner } from "@/components/ui/spinner";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
+import { auth } from "@/lib/firebase";
 import { signUpWithEmail, signInWithGoogle } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { getDocument, docs, patchDocument } from "@/lib/db";
 import { friendlyErrorMessage } from "@/lib/utils";
 import { PasswordStrength } from "@/components/ui/password-strength";
 import type { Client } from "@/lib/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Poll briefly for the DB trigger to finish creating the client row. */
+/** Poll briefly for the client document to exist. */
 async function waitForClient(
   userId: string,
   attempts = 6
 ): Promise<Client | null> {
   for (let i = 0; i < attempts; i++) {
-    const { data } = await supabase
-      .from("clients")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (data) return data as Client;
+    const data = await getDocument<Client>(docs.client(userId));
+    if (data) return data;
     await new Promise((r) => setTimeout(r, 300));
   }
   return null;
@@ -67,7 +64,7 @@ export default function ClientSignupPage() {
     if (loading || client || !user) return;
     let active = true;
     (async () => {
-      const found = await waitForClient(user.id);
+      const found = await waitForClient(user.uid);
       if (!active) return;
       if (found) {
         setClient(found);
@@ -117,10 +114,7 @@ export default function ClientSignupPage() {
         throw signupErr;
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const authUser = session?.user ?? null;
+      const authUser = auth.currentUser;
 
       if (!authUser) {
         toast("Check your email to confirm your account, then log in.", "info");
@@ -128,17 +122,9 @@ export default function ClientSignupPage() {
         return;
       }
 
-      // The trigger already created a baseline row — update it with the
-      // real name/phone the user just entered, then go straight home.
-      const profile = await waitForClient(authUser.id);
-      const { data, error } = await supabase
-        .from("clients")
-        .update({ name: name.trim(), phone: phone.trim() })
-        .eq("user_id", authUser.id)
-        .select()
-        .single();
-
-      const finalProfile = error ? profile : (data as Client);
+      const profile = await waitForClient(authUser.uid);
+      await patchDocument(docs.client(authUser.uid), { name: name.trim(), phone: phone.trim() });
+      const finalProfile = (await getDocument<Client>(docs.client(authUser.uid))) ?? profile;
       if (!finalProfile) throw new Error("Could not finish setting up your account");
 
       setClient(finalProfile);

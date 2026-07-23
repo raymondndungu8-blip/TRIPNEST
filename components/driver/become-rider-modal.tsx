@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { User, Mail, Phone, X } from "lucide-react";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
-import { supabase } from "@/lib/supabase";
+import { getDocument, patchDocument, setDocument, docs, Timestamp } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { friendlyErrorMessage } from "@/lib/utils";
@@ -48,11 +48,7 @@ export function BecomeRiderModal({
 
     setSubmitting(true);
     try {
-      const { data: existing } = await supabase
-        .from("clients")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const existing = await getDocument(docs.client(user.uid));
 
       const payload = {
         name: name.trim(),
@@ -60,14 +56,18 @@ export function BecomeRiderModal({
         phone: phone.trim(),
       };
 
-      const query = existing
-        ? supabase.from("clients").update(payload).eq("user_id", user.id)
-        : supabase.from("clients").insert({ user_id: user.id, ...payload });
+      if (existing) {
+        await patchDocument(docs.client(user.uid), payload);
+      } else {
+        await setDocument(docs.client(user.uid), {
+          ...payload,
+          userId: user.uid,
+          createdAt: Timestamp.now(),
+        });
+      }
 
-      const { data, error } = await query.select().single();
-      if (error) throw error;
-
-      setClient(data as Client);
+      const data = await getDocument<Client>(docs.client(user.uid));
+      if (data) setClient(data);
       toast("Rider mode is ready!", "success");
       router.push("/client");
     } catch (err) {

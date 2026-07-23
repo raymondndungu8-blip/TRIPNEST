@@ -1,34 +1,37 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-)
+import {
+  getDocument,
+  setDocument,
+  removeDocument,
+  queryDocuments,
+  collections,
+  docs,
+  Timestamp,
+} from "./db"
 
 const suspiciousIps = new Map<string, { count: number; lastSeen: number }>()
 
 export async function isIpBlocked(ip: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('blocked_ips')
-    .select('ip')
-    .eq('ip', ip)
-    .single()
+  const data = await getDocument<{ ip: string }>(docs.blockedIp(ip))
   return !!data
 }
 
 export async function blockIp(ip: string, reason?: string): Promise<void> {
-  await supabase.from('blocked_ips').upsert({ ip, reason: reason || 'manual', blocked_at: new Date().toISOString() })
-  console.log(`[IP BLOCK] Blocked ${ip}. Reason: ${reason || 'manual'}`)
+  await setDocument(docs.blockedIp(ip), {
+    ip,
+    reason: reason || "manual",
+    blockedAt: Timestamp.now(),
+  })
+  console.log(`[IP BLOCK] Blocked ${ip}. Reason: ${reason || "manual"}`)
 }
 
 export async function unblockIp(ip: string): Promise<void> {
-  await supabase.from('blocked_ips').delete().eq('ip', ip)
+  await removeDocument(docs.blockedIp(ip))
   console.log(`[IP UNBLOCK] Unblocked ${ip}`)
 }
 
 export async function getBlockedIps(): Promise<string[]> {
-  const { data } = await supabase.from('blocked_ips').select('ip')
-  return (data || []).map((row: { ip: string }) => row.ip)
+  const data = await queryDocuments<{ ip: string }>(collections.blockedIps())
+  return data.map((row) => row.ip)
 }
 
 export function trackSuspiciousActivity(ip: string): boolean {
@@ -50,7 +53,7 @@ export function trackSuspiciousActivity(ip: string): boolean {
   record.lastSeen = now
 
   if (record.count >= 10) {
-    blockIp(ip, 'Excessive suspicious activity')
+    blockIp(ip, "Excessive suspicious activity")
     return true
   }
 
@@ -74,7 +77,7 @@ export async function checkAbuseIpdb(ip: string): Promise<{
       {
         headers: {
           Key: apiKey,
-          Accept: 'application/json',
+          Accept: "application/json",
         },
       }
     )
@@ -91,7 +94,7 @@ export async function checkAbuseIpdb(ip: string): Promise<{
       abuseReports: data.data?.totalReports || 0,
     }
   } catch (error) {
-    console.error('[ABUSEIPDB] Check failed:', error)
+    console.error("[ABUSEIPDB] Check failed:", error)
     return { isKnownAbuser: false, confidenceScore: 0, abuseReports: 0 }
   }
 }

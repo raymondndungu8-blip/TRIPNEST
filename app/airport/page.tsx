@@ -50,14 +50,14 @@ export default function AirportPage() {
       if (!client) return false;
       try {
         await createRide({
-          client_id: client.id,
+          clientId: client.id,
           pickup: values.pickup,
           destination: "JKIA Terminal 1, Nairobi",
-          scheduled_at: values.scheduledAt,
-          vehicle_category: values.vehicleCategory,
-          ride_type: values.rideType,
+          scheduledAt: values.scheduledAt,
+          vehicleCategory: values.vehicleCategory,
+          rideType: values.rideType,
           budget: values.budget,
-          event_id: null,
+          eventId: null,
         });
         toast("Airport ride requested!", "success");
         return true;
