@@ -1,6 +1,16 @@
 export type VehicleCategory = 'Standard' | 'XL' | 'Premium';
 export type RideType = 'Private' | 'Cost Sharing';
 
+export interface PricingRoute {
+  id?: string;
+  from: string;
+  to: string;
+  standard: number;
+  xl: number;
+  premium: number;
+  active: boolean;
+}
+
 export interface Passenger {
   id: string;
   name: string;
@@ -32,23 +42,27 @@ export interface Driver {
 
 export interface Booking {
   id: string;
-  eventId?: string; // Optional if booked generic or to event
+  eventId?: string;
   eventName?: string;
   pickup: string;
   destination: string;
-  dateTime: string; // Date & Time combined
-  budget: number; // Transport budget in USD
-  category: VehicleCategory; // Standard, XL, Premium
-  rideType: RideType; // Private, Cost Sharing
-  driverId: string | null; // Currently assigned driver
+  dateTime: string;
+  category: VehicleCategory;
+  rideType: RideType;
+  driverId: string | null;
   status: 'searching' | 'accepted' | 'en_route' | 'completed' | 'cancelled' | 'rejected_by_all';
-  rejectedDriverIds: string[]; // Driver IDs who rejected this ride
-  availableDriverPool: string[]; // Remaining driver IDs to ask
+  rejectedDriverIds: string[];
+  availableDriverPool: string[];
   originalPrice: number;
   otpCode?: string;
   driverArrived?: boolean;
   isStarted?: boolean;
-  // Payment fields
+  fare?: {
+    amount: number;
+    currency: 'KES';
+    rideType: RideType;
+    vehicleCategory: VehicleCategory;
+  };
   paymentMethod?: 'mpesa' | 'card' | 'cash';
   paymentStatus?: 'unpaid' | 'pending' | 'paid' | 'failed' | 'refunded';
   transactionId?: string;
@@ -63,6 +77,12 @@ export interface DriverNotification {
   destination: string;
   dateTime: string;
   budget: number;
+  fare?: {
+    amount: number;
+    currency: 'KES';
+    rideType: RideType;
+    vehicleCategory: VehicleCategory;
+  };
   rideType: RideType;
   category: VehicleCategory;
   status: 'pending' | 'accepted' | 'rejected';

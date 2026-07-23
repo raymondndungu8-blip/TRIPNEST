@@ -402,6 +402,209 @@ async function startServer() {
     });
   });
 
+  // ======================= PRICING ROUTES (Firestore) =======================
+  const SEED_ROUTES = [
+    { from:"Thika Town",  to:"Nairobi CBD",   standard:650,  xl:850,  premium:1100 },
+    { from:"Thika Town",  to:"JKIA Airport",  standard:1200, xl:1500, premium:2000 },
+    { from:"Thika Town",  to:"Juja",          standard:200,  xl:280,  premium:380  },
+    { from:"Thika Town",  to:"Ruiru",         standard:300,  xl:400,  premium:520  },
+    { from:"Thika Town",  to:"Westlands",     standard:750,  xl:950,  premium:1250 },
+    { from:"Thika Town",  to:"Kasarani",      standard:500,  xl:650,  premium:850  },
+    { from:"Thika Town",  to:"Kilimani",      standard:800,  xl:1000, premium:1300 },
+    { from:"Nairobi CBD", to:"Westlands",     standard:280,  xl:380,  premium:500  },
+    { from:"Nairobi CBD", to:"Kilimani",      standard:300,  xl:400,  premium:520  },
+    { from:"Nairobi CBD", to:"Karen",         standard:450,  xl:580,  premium:750  },
+    { from:"Nairobi CBD", to:"Kasarani",      standard:350,  xl:450,  premium:600  },
+    { from:"Nairobi CBD", to:"Langata",       standard:380,  xl:500,  premium:680  },
+    { from:"Nairobi CBD", to:"South B",       standard:250,  xl:340,  premium:460  },
+    { from:"Nairobi CBD", to:"South C",       standard:260,  xl:350,  premium:470  },
+    { from:"Nairobi CBD", to:"Eastleigh",     standard:220,  xl:300,  premium:420  },
+    { from:"Nairobi CBD", to:"Ngong Road",    standard:320,  xl:420,  premium:560  },
+    { from:"Nairobi CBD", to:"JKIA Airport",  standard:800,  xl:1000, premium:1400 },
+    { from:"Westlands",   to:"JKIA Airport",  standard:700,  xl:900,  premium:1200 },
+    { from:"Westlands",   to:"Karen",         standard:400,  xl:520,  premium:700  },
+    { from:"Karen",       to:"JKIA Airport",  standard:500,  xl:650,  premium:880  },
+  ];
+
+  async function seedPricingRoutes() {
+    if (!db) return;
+    const col = collection(db, 'pricing_routes');
+    const snap = await getDocs(col);
+    if (snap.empty) {
+      for (const route of SEED_ROUTES) {
+        await setDoc(doc(col), { ...route, active: true });
+      }
+      console.log(`Seeded ${SEED_ROUTES.length} pricing routes`);
+    } else {
+      console.log(`Pricing routes already seeded (${snap.size} docs)`);
+    }
+  }
+
+  const FALLBACK_DISTANCES: Record<string, number> = {
+    "thika town-nairobi cbd": 45,
+    "thika town-jkia airport": 52,
+    "thika town-juja": 8,
+    "thika town-ruiru": 14,
+    "thika town-westlands": 50,
+    "thika town-kasarani": 38,
+    "nairobi cbd-westlands": 5,
+    "nairobi cbd-kilimani": 6,
+    "nairobi cbd-karen": 13,
+    "nairobi cbd-kasarani": 10,
+    "nairobi cbd-langata": 10,
+    "nairobi cbd-south b": 5,
+    "nairobi cbd-south c": 6,
+    "nairobi cbd-eastleigh": 4,
+    "nairobi cbd-ngong road": 8,
+    "nairobi cbd-jkia airport": 18,
+    "westlands-jkia airport": 15,
+    "westlands-karen": 11,
+    "karen-jkia airport": 14,
+  };
+
+  const RATES: Record<string, { base: number; perKm: number }> = {
+    Standard: { base: 80, perKm: 35 },
+    XL: { base: 100, perKm: 45 },
+    Premium: { base: 150, perKm: 65 },
+  };
+
+  const MINIMUMS: Record<string, number> = { Standard: 150, XL: 200, Premium: 300 };
+
+  app.post("/api/pricing/calculate", async (req, res) => {
+    try {
+      const { pickup, destination, vehicleCategory, rideType } = req.body;
+      if (!pickup || !destination || !vehicleCategory) {
+        return res.status(400).json({ success: false, message: "pickup, destination, and vehicleCategory are required" });
+      }
+
+      const pickupTrim = pickup.trim();
+      const destTrim = destination.trim();
+
+      // STEP 1: Route table lookup (bidirectional, case-insensitive)
+      let basePrice: number | null = null;
+      let source = 'route_table';
+
+      if (db) {
+        const col = collection(db, 'pricing_routes');
+        const q1 = query(col,
+          where('from', '==', pickupTrim),
+          where('to', '==', destTrim),
+          where('active', '==', true)
+        );
+        const q2 = query(col,
+          where('from', '==', destTrim),
+          where('to', '==', pickupTrim),
+          where('active', '==', true)
+        );
+
+        const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+        const routeDoc = snap1.empty ? (snap2.empty ? null : snap2.docs[0]) : snap1.docs[0];
+
+        if (routeDoc) {
+          const route = routeDoc.data();
+          const catKey = vehicleCategory.toLowerCase();
+          if (catKey === 'standard') basePrice = route.standard;
+          else if (catKey === 'xl') basePrice = route.xl;
+          else if (catKey === 'premium') basePrice = route.premium;
+        }
+      }
+
+      // STEP 2: Distance fallback
+      if (basePrice === null) {
+        const lookupKey = [pickupTrim.toLowerCase(), destTrim.toLowerCase()].sort().join('-');
+        const distKm = FALLBACK_DISTANCES[lookupKey];
+        if (distKm) {
+          const catRates = RATES[vehicleCategory];
+          if (catRates) {
+            basePrice = catRates.base + (distKm * catRates.perKm);
+            source = 'distance_fallback';
+          }
+        }
+      }
+
+      if (basePrice === null) {
+        return res.json({ success: false, message: "Route not found. Please enter valid locations." });
+      }
+
+      // STEP 3: Minimum fare check
+      const minFare = MINIMUMS[vehicleCategory] || 150;
+      if (basePrice < minFare) basePrice = minFare;
+
+      // STEP 4: Shared ride discount
+      let finalPrice: number;
+      if (rideType === 'sharing') {
+        finalPrice = Math.round((basePrice * 0.60) / 10) * 10;
+      } else {
+        finalPrice = Math.round(basePrice / 10) * 10;
+      }
+
+      // STEP 5: Return response
+      return res.json({
+        success: true,
+        pickup: pickupTrim,
+        destination: destTrim,
+        vehicleCategory,
+        rideType: rideType || 'private',
+        finalPrice,
+        currency: 'KES',
+        source,
+      });
+    } catch (error: any) {
+      console.error("Pricing calculation error:", error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  // Admin: get all pricing routes
+  app.get("/api/admin/pricing-routes", async (req, res) => {
+    try {
+      if (!db) return res.json({ routes: [] });
+      const col = collection(db, 'pricing_routes');
+      const snap = await getDocs(col);
+      const routes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      return res.json({ routes });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin: update a pricing route
+  app.put("/api/admin/pricing-routes/:id", async (req, res) => {
+    try {
+      if (!db) return res.status(500).json({ error: "DB not connected" });
+      const { id } = req.params;
+      const { standard, xl, premium, active } = req.body;
+      const updateData: any = {};
+      if (standard !== undefined) updateData.standard = Number(standard);
+      if (xl !== undefined) updateData.xl = Number(xl);
+      if (premium !== undefined) updateData.premium = Number(premium);
+      if (active !== undefined) updateData.active = Boolean(active);
+      await updateDoc(doc(db, 'pricing_routes', id), updateData);
+      return res.json({ success: true });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin: create a new pricing route
+  app.post("/api/admin/pricing-routes", async (req, res) => {
+    try {
+      if (!db) return res.status(500).json({ error: "DB not connected" });
+      const { from, to, standard, xl, premium } = req.body;
+      if (!from || !to || standard === undefined || xl === undefined || premium === undefined) {
+        return res.status(400).json({ error: "from, to, standard, xl, premium are required" });
+      }
+      const docRef = doc(collection(db, 'pricing_routes'));
+      await setDoc(docRef, { from, to, standard: Number(standard), xl: Number(xl), premium: Number(premium), active: true });
+      return res.json({ success: true, id: docRef.id });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Seed pricing on startup
+  seedPricingRoutes();
+
   // Get transaction history for a user
   app.get("/api/transactions/:userId", async (req, res) => {
     try {

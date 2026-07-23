@@ -91,7 +91,6 @@ export default function PagesRenderer({
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [searchPromoText, setSearchPromoText] = useState('');
   const [customDateTime, setCustomDateTime] = useState<string>('');
-  const [customBudget, setCustomBudget] = useState<string>('');
   
   // Stops management
   const [stops, setStops] = useState<string[]>([]);
@@ -102,6 +101,53 @@ export default function PagesRenderer({
     { sender: 'driver', text: 'Hello, I have arrived at the designated lobby terminal.', time: '14:02' }
   ]);
   const [chatInput, setChatInput] = useState('');
+
+  // Pricing calculation states
+  const [calculatedFare, setCalculatedFare] = useState<number | null>(null);
+  const [pricingSource, setPricingSource] = useState<string>('');
+  const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
+  const [priceError, setPriceError] = useState<string | null>(null);
+
+  // Fetch price from backend
+  const fetchPrice = async () => {
+    if (!searchQuery.pickup || !searchQuery.dropoff) return;
+    setIsCalculatingPrice(true);
+    setPriceError(null);
+    setCalculatedFare(null);
+    try {
+      const resp = await fetch('/api/pricing/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pickup: searchQuery.pickup,
+          destination: searchQuery.dropoff,
+          vehicleCategory: bookingCategory,
+          rideType: rideType === 'Private' ? 'private' : 'sharing',
+        }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setCalculatedFare(data.finalPrice);
+        setPricingSource(data.source);
+      } else {
+        setPriceError(data.message || 'Route not available yet. Try a nearby area.');
+      }
+    } catch {
+      setPriceError('Could not calculate fare. Check your connection.');
+    } finally {
+      setIsCalculatingPrice(false);
+    }
+  };
+
+  // Recalculate when category, rideType, pickup, or dropoff change
+  React.useEffect(() => {
+    if (searchQuery.pickup && searchQuery.dropoff) {
+      fetchPrice();
+    } else {
+      setCalculatedFare(null);
+      setPriceError(null);
+    }
+  }, [bookingCategory, rideType, searchQuery.pickup, searchQuery.dropoff]);
 
   // Payment states
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
@@ -141,11 +187,7 @@ export default function PagesRenderer({
   // Create real booking helper
   const handleLaunchSearch = () => {
     const newBookingId = `booking-${Date.now()}`;
-    const pricing = bookingCategory === 'Premium' ? 45 : bookingCategory === 'XL' ? 25 : 15;
-    const discountedPrice = Math.max(5, pricing - (pricing * promoDiscount / 100));
-    
-    // User can set their own budget, otherwise falls back to estimated discountedPrice
-    const parsedBudget = customBudget ? parseFloat(customBudget) || discountedPrice : discountedPrice;
+    const finalPrice = calculatedFare || (bookingCategory === 'Premium' ? 45 : bookingCategory === 'XL' ? 25 : 15);
     const finalDateTime = customDateTime || new Date().toLocaleString();
 
     const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -156,14 +198,14 @@ export default function PagesRenderer({
       pickup: searchQuery.pickup,
       destination: searchQuery.dropoff || '342 Market St, CBD',
       dateTime: finalDateTime,
-      budget: parsedBudget,
       category: bookingCategory,
       rideType: rideType,
       driverId: null,
       status: 'searching',
       rejectedDriverIds: [],
       availableDriverPool: drivers.filter(d => d.category === bookingCategory).map(d => d.id),
-      originalPrice: pricing,
+      originalPrice: finalPrice,
+      fare: { amount: finalPrice, currency: 'KES', rideType, vehicleCategory: bookingCategory },
       otpCode: generatedOtp,
       driverArrived: false,
       isStarted: false,
@@ -333,7 +375,7 @@ export default function PagesRenderer({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             phoneNumber: phone,
-            amount: booking.budget,
+            amount: booking.fare?.amount || booking.originalPrice,
             bookingId: booking.id,
             userId: auth.currentUser?.uid || passenger.id,
             accountReference: `TRIP-${booking.id.slice(-8)}`,
@@ -350,7 +392,7 @@ export default function PagesRenderer({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            amount: booking.budget,
+            amount: booking.fare?.amount || booking.originalPrice,
             currency: 'usd',
             bookingId: booking.id,
           }),
@@ -1163,7 +1205,7 @@ export default function PagesRenderer({
               </div>
             );
 
-          case 11: // Ride Options/Selection Page - Uber-style car selector
+          case 11: // Ride Options/Selection Page - Uber-style car selector with price card
             const options = [
               { key: 'Standard', name: 'Green Eco', desc: 'Nissan Leaf / Tesla Model 3', price: 15, eta: '8 min', icon: '🚗', badge: 'ECONOMY' },
               { key: 'XL', name: 'Elite XL Van', desc: 'Toyota Alphard / Mercedes V-Class', price: 25, eta: '6 min', icon: '🚐', badge: 'XL' },
@@ -1172,7 +1214,6 @@ export default function PagesRenderer({
             const selectedOpt = options.find(o => o.key === bookingCategory) || options[2];
             return (
               <div className="flex flex-col justify-between h-full bg-[#0A0B0F] relative overflow-hidden">
-                {/* Map background */}
                 <div className="absolute inset-0 z-0">
                   <VirtualMap
                     height="100%"
@@ -1183,7 +1224,6 @@ export default function PagesRenderer({
                   />
                 </div>
 
-                {/* Back button */}
                 <div className="relative z-10 p-4 pt-12">
                   <button onClick={() => setPageNumber(8)} className="bg-zinc-950/90 border border-zinc-800 p-2.5 rounded-full text-white shadow-lg">
                     <ArrowRight className="w-4 h-4 rotate-180" />
@@ -1192,12 +1232,10 @@ export default function PagesRenderer({
 
                 <div className="my-auto pointer-events-none z-10" />
 
-                {/* Bottom sheet - Ride type selector */}
                 <div className="bg-[#121318] border-t border-zinc-800 rounded-t-[24px] relative z-10 shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
                   <div className="w-9 h-1 bg-zinc-600 mx-auto rounded-full mt-2.5 mb-1" />
 
                   <div className="px-4 pb-2">
-                    {/* Route summary */}
                     <div className="flex items-center gap-2 text-[11px] text-zinc-400 mb-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-[#007AFF]" />
                       <span className="truncate font-medium">{searchQuery.pickup}</span>
@@ -1207,8 +1245,7 @@ export default function PagesRenderer({
                     </div>
                   </div>
 
-                  {/* Ride option cards */}
-                  <div className="px-4 pb-2 space-y-1.5 max-h-[240px] overflow-y-auto">
+                  <div className="px-4 pb-2 space-y-1.5 max-h-[180px] overflow-y-auto">
                     {options.map((opt) => (
                       <div
                         key={opt.key}
@@ -1237,7 +1274,35 @@ export default function PagesRenderer({
                     ))}
                   </div>
 
-                  {/* Bottom actions */}
+                  {/* Price confirmation card */}
+                  <div className="px-4 pb-2">
+                    {isCalculatingPrice ? (
+                      <div className="bg-[#1A1C23] border border-zinc-800 rounded-xl p-4 flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+                        <span className="text-xs text-zinc-400">Calculating fare...</span>
+                      </div>
+                    ) : priceError ? (
+                      <div className="bg-red-950/20 border border-red-500/20 rounded-xl p-3 text-center">
+                        <p className="text-[11px] text-red-400">{priceError}</p>
+                      </div>
+                    ) : calculatedFare !== null ? (
+                      <div className="bg-[#0F1117] border border-zinc-800 rounded-xl p-4 space-y-2">
+                        <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                          <span className="font-medium">{searchQuery.pickup} → {searchQuery.dropoff}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-zinc-500">{bookingCategory} · {rideType === 'Private' ? 'Private Ride' : 'Shared Ride'}</span>
+                          <div className="text-right">
+                            <span className="text-xl font-black text-white">KES {calculatedFare}</span>
+                            {rideType === 'Cost Sharing' && (
+                              <p className="text-[9px] text-emerald-400">Split with other passengers</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
                   <div className="p-4 pt-2 space-y-2">
                     <div className="flex items-center justify-between text-[11px]">
                       <div className="flex items-center gap-1.5 text-zinc-400">
@@ -1250,9 +1315,10 @@ export default function PagesRenderer({
                     </div>
                     <button
                       onClick={handleLaunchSearch}
-                      className="w-full bg-[#007AFF] hover:bg-[#007AFF]/90 text-white font-bold py-3.5 rounded-xl text-sm tracking-wide shadow-lg shadow-[#007AFF]/20 active:scale-[0.98] transition"
+                      disabled={calculatedFare === null || isCalculatingPrice || !!priceError}
+                      className="w-full bg-[#007AFF] hover:bg-[#007AFF]/90 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-bold py-3.5 rounded-xl text-sm tracking-wide shadow-lg shadow-[#007AFF]/20 active:scale-[0.98] transition disabled:shadow-none disabled:cursor-not-allowed"
                     >
-                      {rideType === 'Private' ? 'Confirm Trip' : 'Request Shared Ride'}
+                      {isCalculatingPrice ? 'Calculating...' : priceError ? 'Cannot book' : rideType === 'Private' ? 'Confirm Booking' : 'Confirm Shared Ride'}
                     </button>
                   </div>
                 </div>
@@ -2146,7 +2212,7 @@ export default function PagesRenderer({
           // ================= POST-RIDE FLOW =================
           case 23: // Trip Completed - with payment processing
             const completedDriver = drivers.find(d => d.id === activeBooking?.driverId) || drivers[0];
-            const baseFare = bookingCategory === 'Premium' ? 45 : bookingCategory === 'XL' ? 25 : 15;
+            const displayFare = activeBooking?.fare?.amount || activeBooking?.originalPrice || 0;
             React.useEffect(() => {
               if (activeBooking && activeBooking.paymentStatus === 'unpaid') {
                 processPayment(activeBooking);
@@ -2167,14 +2233,13 @@ export default function PagesRenderer({
                     <p className="text-[11px] text-zinc-400 mt-1">{searchQuery.dropoff || 'Destination'}</p>
                   </div>
 
-                  {/* Payment status */}
                   <div className="bg-[#121318] border border-zinc-800 rounded-2xl p-4 space-y-3">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
                         <img src={completedDriver?.avatarUrl || ''} alt="driver" className="w-8 h-8 rounded-full object-cover" />
                         <span className="text-sm font-bold text-white">{completedDriver?.name || 'Marcus'}</span>
                       </div>
-                      <span className="text-lg font-black text-white">${baseFare}.00</span>
+                      <span className="text-lg font-black text-white">KES {displayFare}</span>
                     </div>
 
                     {isProcessingPayment && (
@@ -2601,7 +2666,7 @@ export default function PagesRenderer({
                     ))}
                   </div>
 
-                  <div className="pt-2">
+                  <div className="pt-2 space-y-2">
                     <button 
                       onClick={async () => {
                         if (confirm('Are you sure you want to log out and secure your transit session token?')) {
@@ -2618,6 +2683,12 @@ export default function PagesRenderer({
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Secure Sign Out</span>
+                    </button>
+                    <button
+                      onClick={() => setPageNumber(50)}
+                      className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 py-2.5 rounded-xl text-[9px] uppercase font-bold text-center transition"
+                    >
+                      Admin: Pricing Panel
                     </button>
                   </div>
                 </div>
@@ -3054,6 +3125,107 @@ export default function PagesRenderer({
               </div>
             );
 
+          case 50: // Admin Pricing Panel
+            const [adminRoutes, setAdminRoutes] = useState<any[]>([]);
+            const [adminNewRoute, setAdminNewRoute] = useState({ from: '', to: '', standard: '', xl: '', premium: '' });
+            const [adminLoading, setAdminLoading] = useState(true);
+            const adminLoadRoutes = async () => {
+              setAdminLoading(true);
+              try {
+                const resp = await fetch('/api/admin/pricing-routes');
+                const data = await resp.json();
+                if (data.routes) setAdminRoutes(data.routes);
+              } catch {} finally { setAdminLoading(false); }
+            };
+            React.useEffect(() => { adminLoadRoutes(); }, []);
+            const adminSaveRoute = async (id: string, standard: number, xl: number, premium: number, active: boolean) => {
+              await fetch(`/api/admin/pricing-routes/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ standard, xl, premium, active }),
+              });
+              adminLoadRoutes();
+            };
+            const adminAddRoute = async () => {
+              if (!adminNewRoute.from || !adminNewRoute.to) return;
+              await fetch('/api/admin/pricing-routes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  from: adminNewRoute.from, to: adminNewRoute.to,
+                  standard: Number(adminNewRoute.standard),
+                  xl: Number(adminNewRoute.xl),
+                  premium: Number(adminNewRoute.premium),
+                }),
+              });
+              setAdminNewRoute({ from: '', to: '', standard: '', xl: '', premium: '' });
+              adminLoadRoutes();
+            };
+            return (
+              <div className="flex flex-col h-full bg-[#0E1015] text-left overflow-hidden">
+                <header className="p-4 bg-[#0A0C10] border-b border-zinc-850 flex items-center justify-between shrink-0">
+                  <h2 className="text-xs font-black uppercase tracking-wider text-white">Admin: Pricing Routes</h2>
+                  <button onClick={() => setPageNumber(8)} className="p-1 hover:bg-zinc-800 rounded-lg text-zinc-400">
+                    <X className="w-4 h-4" />
+                  </button>
+                </header>
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {adminLoading ? (
+                    <div className="flex items-center justify-center py-10">
+                      <div className="w-5 h-5 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-1">
+                        {adminRoutes.map((r: any) => (
+                          <div key={r.id} className="bg-zinc-950 border border-zinc-900 rounded-xl p-3 text-[11px] space-y-2">
+                            <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+                              <span>{r.from} → {r.to}</span>
+                              <button
+                                onClick={() => adminSaveRoute(r.id, r.standard, r.xl, r.premium, !r.active)}
+                                className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${r.active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}
+                              >
+                                {r.active ? 'Active' : 'Inactive'}
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['standard', 'xl', 'premium'].map((key) => (
+                                <div key={key} className="flex items-center gap-1">
+                                  <span className="text-[8px] uppercase text-zinc-600 w-6">{key.slice(0, 3)}</span>
+                                  <input
+                                    type="number"
+                                    defaultValue={(r as any)[key]}
+                                    onBlur={(e) => {
+                                      const val = Number(e.target.value);
+                                      const upd: any = { standard: r.standard, xl: r.xl, premium: r.premium, active: r.active };
+                                      upd[key] = val;
+                                      adminSaveRoute(r.id, upd.standard, upd.xl, upd.premium, upd.active);
+                                    }}
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-white text-center"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-[#121318] border border-zinc-800 rounded-xl p-3 space-y-2">
+                        <span className="text-[9px] font-black uppercase text-[#007AFF] block">Add New Route</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input value={adminNewRoute.from} onChange={e => setAdminNewRoute({...adminNewRoute, from: e.target.value})} placeholder="From" className="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white" />
+                          <input value={adminNewRoute.to} onChange={e => setAdminNewRoute({...adminNewRoute, to: e.target.value})} placeholder="To" className="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white" />
+                          <input value={adminNewRoute.standard} onChange={e => setAdminNewRoute({...adminNewRoute, standard: e.target.value})} placeholder="Standard" type="number" className="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white" />
+                          <input value={adminNewRoute.xl} onChange={e => setAdminNewRoute({...adminNewRoute, xl: e.target.value})} placeholder="XL" type="number" className="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white" />
+                          <input value={adminNewRoute.premium} onChange={e => setAdminNewRoute({...adminNewRoute, premium: e.target.value})} placeholder="Premium" type="number" className="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white" />
+                        </div>
+                        <button onClick={adminAddRoute} className="w-full bg-[#007AFF] hover:bg-[#007AFF]/90 text-white font-bold py-2 rounded-xl text-xs">Add Route</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+
           case 45: // Unified Bookings Dashboard Page
             return (
               <div className="flex flex-col justify-between h-full bg-[#0E1015] p-5 text-left select-none overflow-y-auto scrollbar-none pb-14">
@@ -3082,7 +3254,7 @@ export default function PagesRenderer({
                         <p className="truncate"><strong className="text-[#007AFF] font-mono text-[9px]">TO:</strong> {activeBooking.destination}</p>
                         <p className="pt-1.5 border-t border-zinc-900/80 font-mono flex justify-between">
                           <span>PRICE:</span>
-                          <span className="font-bold text-amber-400">KSH {Math.round(activeBooking.budget * 100)}</span>
+                          <span className="font-bold text-amber-400">KES {activeBooking.fare?.amount || activeBooking.originalPrice}</span>
                         </p>
                       </div>
                       <button 

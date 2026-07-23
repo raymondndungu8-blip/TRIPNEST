@@ -411,8 +411,8 @@ export default function DriverDashboardView({
 
                     <div className="flex flex-col items-end gap-3 shrink-0 self-stretch md:self-center justify-between">
                       <div className="text-right">
-                        <span className="block text-[10px] uppercase font-bold text-on-surface-variant">Transport Budget</span>
-                        <strong className="text-xl font-black text-primary">${alert.budget}.00</strong>
+                        <span className="block text-[10px] uppercase font-bold text-on-surface-variant">Fare</span>
+                        <strong className="text-xl font-black text-primary">KES {alert.fare?.amount || alert.originalPrice}</strong>
                       </div>
 
                       <div className="flex gap-2 w-full md:w-auto">
@@ -504,7 +504,7 @@ export default function DriverDashboardView({
                     <div className="flex flex-col justify-between items-end shrink-0 md:w-48 text-right gap-3">
                       <div>
                         <span className="block text-[8px] uppercase tracking-wider opacity-60">Fare Ticket</span>
-                        <strong className="text-sm font-black text-primary">${ride.budget}.00</strong>
+                        <strong className="text-sm font-black text-primary">KES {ride.fare?.amount || ride.originalPrice}</strong>
                       </div>
 
                       {/* Driver Action Stepper Layout */}
@@ -631,7 +631,7 @@ export default function DriverDashboardView({
                     <span className="font-bold text-on-surface">{p.destination}</span>
                     <span className="block text-[9px] opacity-65">{new Date(p.dateTime).toLocaleDateString()}</span>
                   </div>
-                  <strong className="text-green-400 font-bold">+${p.budget}.00</strong>
+                    <strong className="text-green-400 font-bold">+KES {p.fare?.amount || p.originalPrice}</strong>
                 </div>
               ))}
             </div>
