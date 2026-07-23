@@ -1,10 +1,10 @@
 {
-  "projectId": "uplifted-kayak-vrwfn",
-  "appId": "1:821547404371:web:ed57acd4ba26c72c1e4aa6",
-  "apiKey": "AIzaSyB2iwguAhMCkvLOmbVDaKgq8DfK1VCir9g",
-  "authDomain": "uplifted-kayak-vrwfn.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-b5359e0e-4268-4c00-a6a5-bcc7dec27a2d",
-  "storageBucket": "uplifted-kayak-vrwfn.firebasestorage.app",
-  "messagingSenderId": "821547404371",
-  "measurementId": ""
+  "projectId": "tripnest-6f974",
+  "appId": "1:542833767973:web:1714d6e9cbd393abae71cc",
+  "apiKey": "AIzaSyAaWWB1QaFMt_EuUXloQJcvWOMr9qpaPYg",
+  "authDomain": "tripnest-6f974.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "tripnest-6f974.firebasestorage.app",
+  "messagingSenderId": "542833767973",
+  "measurementId": "G-JL3EYEQX44"
 }
