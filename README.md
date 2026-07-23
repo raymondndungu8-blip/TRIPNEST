@@ -12,6 +12,13 @@
   </p>
 </div>
 
+## Leadership
+
+| Role | Name |
+|---|---|
+| CEO / CFO | **Andrew Dames** |
+| CTO / CFO | **Raymond Ndungu** |
+
 ---
 
 TripNest is a ride-booking platform built for Kenya with flat-rate route-based pricing, M-Pesa and card payments, real-time driver tracking, and an admin pricing panel.
@@ -125,3 +132,5 @@ Deploy security rules:
 ```bash
 firebase deploy --only firestore
 ```
+
+
