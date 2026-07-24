@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, CalendarHeart, Route, UserCircle, MessageCircle } from "lucide-react";
+import { Home, CalendarHeart, Route, UserCircle, MessageCircle, Wallet } from "lucide-react";
 import { useSession } from "@/components/providers/session-provider";
 import { cn } from "@/lib/utils";
 
 const CLIENT_TABS = [
   { href: "/client", label: "Home", icon: Home },
   { href: "/events", label: "Events", icon: CalendarHeart },
-  { href: "/client/wallet", label: "Inbox", icon: Route },
+  { href: "/client/wallet", label: "Wallet", icon: Wallet },
   { href: "/client/favorites", label: "Setup", icon: UserCircle },
 ];
 

@@ -1,319 +1,361 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
-  MessageCircle,
-  Send,
-  Car,
+  Smartphone,
+  CreditCard,
+  Plus,
+  Check,
+  ChevronRight,
+  Shield,
+  Zap,
+  AlertCircle,
+  X,
+  Wallet,
+  Receipt,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
-import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Skeleton } from "@/components/ui/skeleton";
 import { RequireRole } from "@/components/auth/require-role";
 import { useSession } from "@/components/providers/session-provider";
-import { useToast } from "@/components/providers/toast-provider";
-import { onSnapshot, query } from "firebase/firestore";
-import { db } from "@/lib/firestore";
-import { collections, where, orderBy } from "@/lib/db";
-import {
-  fetchConversations,
-  fetchMessages,
-  sendMessage,
-  type ConversationPreview,
-  type Message,
-} from "@/lib/messages";
-import { friendlyErrorMessage } from "@/lib/utils";
 
-function timeAgo(dateStr: string): string {
-  if (!dateStr) return "";
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d`;
+interface PaymentMethod {
+  id: string;
+  type: "mpesa" | "card";
+  label: string;
+  detail: string;
+  isDefault: boolean;
+  verified: boolean;
 }
 
-function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const MOCK_METHODS: PaymentMethod[] = [
+  {
+    id: "mpesa-1",
+    type: "mpesa",
+    label: "M-Pesa",
+    detail: "+254 7XX XXX 123",
+    isDefault: true,
+    verified: true,
+  },
+];
 
-function ChatView({
-  clientId,
-  driverId,
-  driverName,
-  driverVehicle,
-  onBack,
-}: {
-  clientId: string;
-  driverId: string;
-  driverName: string;
-  driverVehicle: string;
-  onBack: () => void;
-}) {
-  const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+const RECENT_TXNS = [
+  { id: "1", label: "Ride to Westlands", amount: 450, date: "Today, 2:30 PM", status: "paid" as const },
+  { id: "2", label: "Ride to Airport", amount: 1200, date: "Yesterday, 8:15 AM", status: "paid" as const },
+  { id: "3", label: "Ride to CBD", amount: 300, date: "Jul 22, 6:45 PM", status: "paid" as const },
+];
 
-  const scrollToBottom = useCallback(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []);
+function AddMethodModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState<"choose" | "mpesa" | "done">("choose");
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const q = query(
-      collections.messages(),
-      where("clientId", "==", clientId),
-      where("driverId", "==", driverId),
-      orderBy("createdAt", "asc")
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Message[];
-        setMessages(msgs);
-        setLoading(false);
-        setTimeout(scrollToBottom, 100);
-      },
-      () => {
-        setLoading(false);
-      }
-    );
-    return () => unsub();
-  }, [clientId, driverId, scrollToBottom]);
-
-  async function handleSend(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = text.trim();
-    if (!trimmed || sending) return;
-    if (trimmed.length > 2000) {
-      toast("Message is too long (max 2000 characters)", "warning");
-      return;
-    }
-    setSending(true);
-    try {
-      await sendMessage(clientId, driverId, "client", trimmed);
-      setText("");
-    } catch (err) {
-      toast(friendlyErrorMessage(err, "Could not send message"), "error");
-    } finally {
-      setSending(false);
-    }
+  async function handleVerifyMpesa() {
+    if (!phone.trim()) return;
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 1500));
+    setLoading(false);
+    setStep("done");
   }
 
   return (
-    <div className="flex h-[calc(100dvh-80px)] flex-col">
-      {/* Chat header */}
-      <div className="flex items-center gap-3 border-b border-border pb-3">
-        <button
-          onClick={onBack}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <Avatar name={driverName} size={40} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-foreground">{driverName}</p>
-          <p className="truncate text-xs text-muted-foreground">{driverVehicle}</p>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 80, opacity: 0 }}
+        transition={{ type: "spring", damping: 28, stiffness: 320 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-t-3xl border border-border bg-surface p-6 pb-10 sm:rounded-3xl"
+      >
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold text-foreground">
+            {step === "choose" && "Add Payment Method"}
+            {step === "mpesa" && "Link M-Pesa"}
+            {step === "done" && "All Set!"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
-      </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto py-4">
-        {loading ? (
-          <div className="space-y-3 px-1">
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-12 w-2/3" />
-            ))}
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center text-center">
-            <MessageCircle className="mb-3 h-10 w-10 text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">
-              No messages yet. Say hi to coordinate your pickup!
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2 px-1">
-            {messages.map((msg) => {
-              const isMe = msg.senderType === "client";
-              return (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm ${
-                      isMe
-                        ? "bg-accent text-background rounded-br-md"
-                        : "bg-surface-2 text-foreground rounded-bl-md"
-                    }`}
-                  >
-                    <p>{msg.content}</p>
-                    <p
-                      className={`mt-1 text-[10px] ${
-                        isMe ? "text-background/60" : "text-muted-foreground"
-                      }`}
-                    >
-                      {formatTime(msg.createdAt)}
+        <AnimatePresence mode="wait">
+          {step === "choose" && (
+            <motion.div
+              key="choose"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-3"
+            >
+              <button
+                onClick={() => setStep("mpesa")}
+                className="flex w-full items-center gap-4 rounded-2xl border border-border bg-surface-2/50 p-4 text-left transition-all hover:border-accent/40 hover:bg-surface-2"
+              >
+                <div className="grid h-12 w-12 place-items-center rounded-xl bg-[#4CAF50]/15">
+                  <Smartphone className="h-6 w-6 text-[#4CAF50]" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">M-Pesa</p>
+                  <p className="text-xs text-muted-foreground">Pay instantly from your M-Pesa balance</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+
+              <button
+                disabled
+                className="flex w-full items-center gap-4 rounded-2xl border border-border bg-surface-2/30 p-4 text-left opacity-50"
+              >
+                <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary-soft">
+                  <CreditCard className="h-6 w-6 text-accent" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">Debit / Credit Card</p>
+                  <p className="text-xs text-muted-foreground">Coming soon</p>
+                </div>
+              </button>
+            </motion.div>
+          )}
+
+          {step === "mpesa" && (
+            <motion.div
+              key="mpesa"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="space-y-5"
+            >
+              <div className="rounded-2xl bg-[#4CAF50]/10 p-4">
+                <div className="flex items-start gap-3">
+                  <Shield className="mt-0.5 h-5 w-5 shrink-0 text-[#4CAF50]" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">How it works</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      We&apos;ll send an STK prompt to your phone. Approve it to verify your M-Pesa number. No money is charged during verification.
                     </p>
                   </div>
-                </motion.div>
-              );
-            })}
-            <div ref={bottomRef} />
-          </div>
-        )}
-      </div>
+                </div>
+              </div>
 
-      {/* Input */}
-      <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-border pt-3">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type a message..."
-          maxLength={2000}
-          className="input-transparent flex-1 rounded-2xl border border-border bg-surface-2/60 px-4 py-3 text-[15px] focus:outline-none focus:ring-1 focus:ring-accent/40"
-        />
-        <Button
-          type="submit"
-          size="icon"
-          disabled={!text.trim() || sending}
-          className="shrink-0"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      </form>
-    </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  M-Pesa Phone Number
+                </label>
+                <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface-2/50 px-4 py-3">
+                  <span className="text-sm font-medium text-muted-foreground">+254</span>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    placeholder="7XXXXXXXX"
+                    className="input-transparent flex-1 bg-transparent text-sm focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <Button
+                fullWidth
+                size="lg"
+                loading={loading}
+                disabled={phone.length < 9}
+                onClick={handleVerifyMpesa}
+                className="rounded-2xl"
+              >
+                <Zap className="h-4 w-4" />
+                Send Verification Prompt
+              </Button>
+            </motion.div>
+          )}
+
+          {step === "done" && (
+            <motion.div
+              key="done"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex flex-col items-center py-4 text-center"
+            >
+              <div className="mb-4 grid h-16 w-16 place-items-center rounded-full bg-[#4CAF50]/15">
+                <Check className="h-8 w-8 text-[#4CAF50]" />
+              </div>
+              <p className="font-display text-lg font-bold text-foreground">M-Pesa Verified</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                +254 {phone} is now linked to your TripNest wallet.
+              </p>
+              <Button fullWidth size="lg" onClick={onClose} className="mt-6 rounded-2xl">
+                Done
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </motion.div>
   );
 }
 
-function InboxContent() {
+function WalletContent() {
   const { client } = useSession();
-  const [conversations, setConversations] = useState<ConversationPreview[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeChat, setActiveChat] = useState<ConversationPreview | null>(null);
-
-  useEffect(() => {
-    if (!client) return;
-    let active = true;
-    async function load() {
-      try {
-        const convos = await fetchConversations(client!.id);
-        if (active) {
-          setConversations(convos);
-          setLoading(false);
-        }
-      } catch {
-        if (active) setLoading(false);
-      }
-    }
-    load();
-    return () => { active = false; };
-  }, [client]);
-
-  if (!client) return null;
-
-  if (activeChat) {
-    return (
-      <AppShell>
-        <ChatView
-          clientId={client.id}
-          driverId={activeChat.driver_id}
-          driverName={activeChat.driver_name}
-          driverVehicle={`${activeChat.driver_vehicle} · ${activeChat.driver_plate}`}
-          onBack={() => setActiveChat(null)}
-        />
-      </AppShell>
-    );
-  }
+  const [methods, setMethods] = useState<PaymentMethod[]>(MOCK_METHODS);
+  const [showAdd, setShowAdd] = useState(false);
 
   return (
     <AppShell>
-      {/* Header */}
       <div className="mb-1">
         <h1 className="font-display text-2xl font-extrabold text-foreground">
-          Inbox
+          Wallet
         </h1>
         <p className="text-sm text-muted-foreground">
-          Chat with your drivers to coordinate pickups
+          Manage your payment methods
         </p>
       </div>
 
-      {/* Conversations list */}
-      <div className="mt-5">
-        {loading ? (
-          <div className="space-y-3">
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-[72px] w-full" />
-            ))}
+      {/* Balance Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mt-5 rounded-2xl border border-border bg-gradient-to-br from-accent/10 via-surface-2 to-surface-2 p-5"
+      >
+        <div className="flex items-center gap-3">
+          <div className="grid h-11 w-11 place-items-center rounded-xl bg-accent/15">
+            <Wallet className="h-5 w-5 text-accent" />
           </div>
-        ) : conversations.length === 0 ? (
-          <EmptyState
-            icon={MessageCircle}
-            title="No conversations yet"
-            description="Once you book a ride or add a favorite driver, you can chat with them here."
-          />
-        ) : (
-          <AnimatePresence>
-            <div className="space-y-2">
-              {conversations.map((convo) => (
-                <motion.button
-                  key={convo.driver_id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  onClick={() => setActiveChat(convo)}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-border bg-surface-2/40 p-3.5 text-left transition-all hover:bg-surface-2"
-                >
-                  <Avatar name={convo.driver_name} size={48} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate font-semibold text-foreground">
-                        {convo.driver_name}
-                      </p>
-                      {convo.last_message_at && (
-                        <span className="shrink-0 text-[11px] text-muted-foreground">
-                          {timeAgo(convo.last_message_at)}
-                        </span>
-                      )}
-                    </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {convo.driver_vehicle} · {convo.driver_plate}
-                    </p>
-                    <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                      {convo.last_message || (
-                        <span className="italic">Tap to start chatting</span>
-                      )}
-                    </p>
-                  </div>
-                  <Car className="h-5 w-5 shrink-0 text-muted-foreground/40" />
-                </motion.button>
-              ))}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">TripNest Credit</p>
+            <p className="font-display text-2xl font-extrabold text-foreground">KES 0.00</p>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Add credit for instant ride payments. You can also pay directly via M-Pesa STK prompt at ride end.
+        </p>
+      </motion.div>
+
+      {/* Payment Methods */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            Payment Methods
+          </h2>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-1 text-xs font-medium text-accent transition-colors hover:text-accent/80"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add
+          </button>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          {methods.map((m) => (
+            <motion.div
+              key={m.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-surface-2/40 p-4"
+            >
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#4CAF50]/15">
+                <Smartphone className="h-5 w-5 text-[#4CAF50]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-foreground">{m.label}</p>
+                  {m.verified && (
+                    <span className="grid h-4 w-4 place-items-center rounded-full bg-[#4CAF50]/20">
+                      <Check className="h-2.5 w-2.5 text-[#4CAF50]" />
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{m.detail}</p>
+              </div>
+              {m.isDefault && (
+                <span className="shrink-0 rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent">
+                  Default
+                </span>
+              )}
+            </motion.div>
+          ))}
+
+          {methods.length === 0 && (
+            <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-surface/40 py-10 text-center">
+              <AlertCircle className="mb-2 h-8 w-8 text-muted-foreground/30" />
+              <p className="text-sm font-medium text-muted-foreground">No payment methods yet</p>
+              <p className="mt-1 text-xs text-muted-foreground/70">
+                Add M-Pesa to start paying for rides
+              </p>
             </div>
-          </AnimatePresence>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Recent Transactions */}
+      <div className="mt-7">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            Recent Rides
+          </h2>
+          <Receipt className="h-4 w-4 text-muted-foreground/40" />
+        </div>
+
+        <div className="mt-3 space-y-2">
+          {RECENT_TXNS.map((tx) => (
+            <div
+              key={tx.id}
+              className="flex items-center justify-between rounded-2xl border border-border bg-surface-2/30 px-4 py-3"
+            >
+              <div>
+                <p className="text-sm font-medium text-foreground">{tx.label}</p>
+                <p className="text-xs text-muted-foreground">{tx.date}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-foreground">KES {tx.amount}</p>
+                <span className="text-[10px] font-medium uppercase text-[#4CAF50]">{tx.status}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* How It Works */}
+      <div className="mt-7 rounded-2xl border border-border bg-surface-2/30 p-4">
+        <h3 className="mb-3 font-display text-sm font-bold text-foreground">
+          How Payments Work
+        </h3>
+        <div className="space-y-3">
+          {[
+            { step: "1", text: "Link your M-Pesa number in Payment Methods above" },
+            { step: "2", text: "When your ride ends, you&apos;ll receive an STK prompt on your phone" },
+            { step: "3", text: "Enter your M-Pesa PIN to complete the payment" },
+          ].map((item) => (
+            <div key={item.step} className="flex items-start gap-3">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent/15 text-[11px] font-bold text-accent">
+                {item.step}
+              </span>
+              <p className="text-xs leading-relaxed text-muted-foreground" dangerouslySetInnerHTML={{ __html: item.text }} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showAdd && <AddMethodModal onClose={() => setShowAdd(false)} />}
+      </AnimatePresence>
     </AppShell>
   );
 }
 
-export default function InboxPage() {
+export default function WalletPage() {
   return (
     <RequireRole role="client">
-      <InboxContent />
+      <WalletContent />
     </RequireRole>
   );
 }
