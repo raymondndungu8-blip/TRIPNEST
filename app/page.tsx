@@ -6,6 +6,7 @@ import { useSession } from "@/components/providers/session-provider";
 import Slideshow from "@/components/ui/slideshow";
 import { Button } from "@/components/ui/button";
 import { LogoMark } from "@/components/brand/logo";
+import { LeadershipSection } from "@/components/landing/leadership";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -30,9 +31,11 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-background">
-      {/* Background Slideshow */}
-      <Slideshow />
+    <div className="relative min-h-screen w-full bg-background">
+      {/* Full-screen hero */}
+      <div className="relative min-h-screen w-full overflow-hidden">
+        {/* Background Slideshow */}
+        <Slideshow />
 
       {/* Main Content Overlay */}
       <div className="pointer-events-none relative z-10 flex min-h-screen flex-col justify-between px-5 py-7 sm:px-6 md:px-12 md:py-12">
@@ -108,6 +111,10 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
+      </div>
+
+      {/* Leadership */}
+      <LeadershipSection />
     </div>
   );
 }
