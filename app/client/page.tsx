@@ -26,6 +26,7 @@ import {
   CalendarHeart,
   Route,
   UserCircle,
+  MessageCircle,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Avatar } from "@/components/ui/avatar";
@@ -137,7 +138,8 @@ function MenuDrawer({
   const links = [
     { href: "/client", label: "Home", icon: Home },
     { href: "/events", label: "Events", icon: CalendarHeart },
-    { href: "/client/wallet", label: "Inbox", icon: Route },
+    { href: "/client/inbox", label: "Inbox", icon: MessageCircle },
+    { href: "/client/wallet", label: "Wallet", icon: Wallet },
     { href: "/client/favorites", label: "Setup & favorites", icon: UserCircle },
   ];
 

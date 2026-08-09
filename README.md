@@ -1,17 +1,26 @@
 # TripNest
 
+![TripNest UI](tripnest%20ui.jpeg)
+
+> **Live:** [tripnest-puce.vercel.app](https://tripnest-puce.vercel.app)
+
 TripNest is a **mobile-first ride-booking & event-transport marketplace**. Customers
 pre-order drivers for **scheduled rides, airport pickups, event travel, and shared rides**;
 drivers go online and accept/reject requests in real time.
 
 See [PRD.md](PRD.md) for the full product spec and roadmap.
 
+## Leadership
+
+- **Andrew Dames** — Chief Executive Officer / Chief Financial Officer
+- **Raymond Ndungu** — Chief Financial Officer / Chief Technology Officer
+
 ## Stack
 
 - **Next.js** (App Router) + **TypeScript**
 - **Tailwind CSS** — custom design system (deep navy + electric blue `#2563EB`, glassmorphism)
 - **Framer Motion** — spring micro-interactions
-- **Supabase** — Postgres + Realtime (live request routing)
+- **Firebase** — Auth, Firestore, Storage (live request routing & chat)
 - Sora (display) + Inter (body) via `next/font`
 
 ## Project structure
@@ -21,12 +30,13 @@ app/                 Routes (App Router)
   page.tsx           Landing / role select
   signup/client      Client signup
   signup/driver      Driver signup
-  client/            Client dashboard + favorites
-  driver/            Driver dashboard
+  client/            Client dashboard + inbox + favorites
+  driver/            Driver dashboard + inbox + trips + profile
   events/            Events listing + book-to-event
+  airport/           Airport transfers + flight board
 components/          UI primitives, layout, providers, ride card, brand
 hooks/use-rides.ts   Realtime ride subscriptions
-lib/                 supabase client, types, ride & favorites services, utils
+lib/                 firebase client, auth, firestore, types, ride & favorites services, utils
 legacy/              The original vanilla-JS prototype (Mark 0.1), kept for reference
 PRD.md               Product Requirements Document
 ```
@@ -39,12 +49,16 @@ Requires Node 18.18+.
 npm install
 ```
 
-Environment variables live in `.env.local` (already configured for the prototype Supabase
-project):
+Environment variables live in `.env.local` (already configured for the Firebase project):
 
 ```text
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=...
 ```
 
 ## Run
@@ -67,9 +81,9 @@ port 3000 by default (or pass `-- -p 4173`). Open `http://localhost:3000`.
 7. The request appears on the driver's phone **live**. Accept it → the client's status flips
    to *Accepted* in real time. Mark complete → the client can favorite the driver.
 
-Because data is in Supabase (not just local memory), the two phones do **not** need to be on
-the same network for production — only the local dev server does. Deploy (e.g. Vercel) to test
-across networks.
+Because data is in Firebase Firestore (not just local memory), the two phones do **not** need to
+be on the same network for production — only the local dev server does. Deploy (e.g. Vercel) to
+test across networks.
 
 ## Build
 
@@ -77,15 +91,13 @@ across networks.
 npm run build && npm start
 ```
 
-## Security note (prototype)
+## Security
 
-This is a **no-auth prototype**. Supabase Row-Level Security is enabled but with **permissive
-`USING (true)` policies**, so anyone with the anon key can read/write. This is intentional for
-fast local testing and is flagged by Supabase's linter. **Before any real launch (Phase 2 –
-Accounts):** add real authentication and replace these policies with per-user rules. See
-[Supabase RLS docs](https://supabase.com/docs/guides/database/postgres/row-level-security).
+Authentication is handled by Firebase Auth (email/phone), with role-based access for clients and
+drivers. Production deployments must keep Firebase Security Rules locked down so users can only
+read/write their own data.
 
 ## Roadmap
 
-Payments, real GPS/maps, accounts/auth, distance-based matching, trip history, ratings, admin,
-and push notifications — see [PRD.md](PRD.md) §9.
+Ratings, push notifications, live GPS tracking, distance-based matching, surge pricing, admin
+dashboard, and PWA support — see [PRD.md](PRD.md) §11.

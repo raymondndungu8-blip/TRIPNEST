@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const CLIENT_TABS = [
   { href: "/client", label: "Home", icon: Home },
   { href: "/events", label: "Events", icon: CalendarHeart },
-  { href: "/client/wallet", label: "Wallet", icon: Wallet },
+  { href: "/client/inbox", label: "Inbox", icon: MessageCircle },
   { href: "/client/favorites", label: "Setup", icon: UserCircle },
 ];
 
