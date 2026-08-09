@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#111a2e"/>
+    </linearGradient>
+    <linearGradient id="bladeA" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#1D4ED8"/>
+      <stop offset="0.55" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="bladeB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7DD3FC"/>
+      <stop offset="0.5" stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="carBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <linearGradient id="hubGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7DD3FC"/>
+      <stop offset="1" stop-color="#0891B2"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#38BDF8" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2563EB" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#2563EB" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+
+  <!-- soft glows -->
+  <circle cx="930" cy="300" r="320" fill="url(#glow)"/>
+  <circle cx="190" cy="150" r="240" fill="url(#glow2)"/>
+
+  <!-- faint guide lines -->
+  <g stroke="#7DD3FC" stroke-opacity="0.05" stroke-width="1">
+    <line x1="70" y1="150" x2="70" y2="500"/>
+    <line x1="160" y1="150" x2="160" y2="500"/>
+    <line x1="250" y1="150" x2="250" y2="500"/>
+  </g>
+
+  <!-- brand mark (two crossed blades forming the N) -->
+  <g transform="translate(92 172) scale(2.3)">
+    <path d="M9 47 C 13 31 21 18 35 7 C 30 25 25 35 21 47 C 17 48 12 48 9 47 Z" fill="url(#bladeA)"/>
+    <path d="M39 47 C 35 31 27 18 13 7 C 18 25 23 35 27 47 C 31 48 36 48 39 47 Z" fill="url(#bladeB)"/>
+    <path d="M24 20 C 26.5 22.5 26.5 25.5 24 28 C 21.5 25.5 21.5 22.5 24 20 Z" fill="#E0F2FE" opacity="0.85"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="228" y="264" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="92" font-weight="800" letter-spacing="9" fill="#F1F5F9">TRIPNEST</text>
+
+  <!-- tagline -->
+  <text x="231" y="330" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="38" font-weight="500" letter-spacing="4" fill="#7DD3FC">better the driver.</text>
+
+  <!-- accent bar -->
+  <rect x="233" y="352" width="88" height="5" rx="2.5" fill="url(#bladeB)"/>
+
+  <!-- car illustration -->
+  <g transform="translate(720 220) scale(1.45)">
+    <!-- motion streaks -->
+    <line x1="24" y1="62" x2="52" y2="62" stroke="#38BDF8" stroke-opacity="0.5" stroke-width="4" stroke-linecap="round"/>
+    <line x1="8" y1="80" x2="40" y2="80" stroke="#7DD3FC" stroke-opacity="0.3" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- body -->
+    <path d="M298,100 C300,92 297,86 291,82 C287,78 282,76 276,76 C262,74 250,70 244,62 C238,50 226,44 212,42 C198,40 184,40 170,42 C156,44 148,50 144,58 C140,64 132,66 122,68 C108,70 96,74 90,80 C86,84 84,90 86,96 L90,104 L118,104 A22,22 0 0 0 158,104 L200,104 A22,22 0 0 0 240,104 L290,104 Z" fill="url(#carBody)"/>
+
+    <!-- cabin glass -->
+    <path d="M112,60 C118,50 130,45 142,44 L160,43 L164,60 C150,58 130,58 112,60 Z" fill="#0B1220" fill-opacity="0.6"/>
+
+    <!-- door seam -->
+    <line x1="150" y1="45" x2="150" y2="102" stroke="#0B1220" stroke-opacity="0.25" stroke-width="2"/>
+
+    <!-- wheels -->
+    <circle cx="138" cy="104" r="20" fill="#0A1420"/>
+    <circle cx="138" cy="104" r="14" fill="none" stroke="#38BDF8" stroke-opacity="0.5" stroke-width="2"/>
+    <circle cx="138" cy="104" r="9" fill="url(#hubGrad)"/>
+    <circle cx="220" cy="104" r="20" fill="#0A1420"/>
+    <circle cx="220" cy="104" r="14" fill="none" stroke="#38BDF8" stroke-opacity="0.5" stroke-width="2"/>
+    <circle cx="220" cy="104" r="9" fill="url(#hubGrad)"/>
+  </g>
+</svg>

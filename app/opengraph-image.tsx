@@ -1,8 +1,8 @@
 import { ImageResponse } from "next/og";
-import { markDataUri, BRAND } from "@/lib/brand-svg";
+import { markDataUri, carDataUri, BRAND } from "@/lib/brand-svg";
 
 export const runtime = "nodejs";
-export const alt = "TripNest — better the driver you know.";
+export const alt = "TripNest — better the driver.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -30,51 +30,64 @@ export default async function OgImage() {
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
+          flexDirection: "row",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "space-between",
+          paddingLeft: 80,
+          paddingRight: 72,
           background:
-            "radial-gradient(1200px 600px at 50% -10%, rgba(37,99,235,0.35), transparent 60%), linear-gradient(135deg, #0b1220 0%, #111a2e 100%)",
+            "radial-gradient(1100px 560px at 78% 8%, rgba(37,99,235,0.4), transparent 62%), radial-gradient(700px 500px at -6% 108%, rgba(56,189,248,0.22), transparent 55%), linear-gradient(135deg, #0b1220 0%, #111a2e 100%)",
         }}
       >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={markDataUri(104)} width={104} height={104} alt="" />
+          <div
+            style={{
+              display: "flex",
+              marginTop: 24,
+              fontFamily: "Sora",
+              fontSize: 78,
+              fontWeight: 700,
+              letterSpacing: 9,
+              color: "#ffffff",
+            }}
+          >
+            TRIPNEST
+          </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: 10,
+              fontFamily: "Inter",
+              fontSize: 38,
+              fontWeight: 500,
+              color: "#38bdf8",
+            }}
+          >
+            {BRAND.motto}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: 18,
+              fontFamily: "Inter",
+              fontSize: 24,
+              color: "#94a3b8",
+            }}
+          >
+            Ride &amp; event transport · pre-order your driver
+          </div>
+        </div>
+
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={markDataUri(160)} width={160} height={160} alt="" />
-        <div
-          style={{
-            display: "flex",
-            marginTop: 28,
-            fontFamily: "Sora",
-            fontSize: 104,
-            fontWeight: 700,
-            letterSpacing: 8,
-            color: "#ffffff",
-          }}
-        >
-          TRIPNEST
-        </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 8,
-            fontFamily: "Inter",
-            fontSize: 40,
-            fontWeight: 500,
-            color: "#38bdf8",
-          }}
-        >
-          {BRAND.motto}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 40,
-            fontFamily: "Inter",
-            fontSize: 26,
-            color: "#94a3b8",
-          }}
-        >
-          Ride &amp; event transport · pre-order your driver
-        </div>
+        <img src={carDataUri()} width={520} height={228} alt="" />
       </div>
     ),
     { ...size, fonts }
