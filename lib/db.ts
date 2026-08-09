@@ -16,6 +16,7 @@ import {
   type DocumentData,
   type QueryConstraint,
   type FirestoreError,
+  type SetOptions,
 } from "firebase/firestore"
 import { db } from "./firestore"
 
@@ -77,9 +78,14 @@ export async function createDocument<T extends DocumentData>(
 
 export async function setDocument<T extends DocumentData>(
   ref: ReturnType<typeof doc>,
-  data: T
+  data: T,
+  options?: SetOptions
 ): Promise<void> {
-  await setDoc(ref, data)
+  if (options) {
+    await setDoc(ref, data as DocumentData, options)
+  } else {
+    await setDoc(ref, data as DocumentData)
+  }
 }
 
 export async function patchDocument<T extends DocumentData>(

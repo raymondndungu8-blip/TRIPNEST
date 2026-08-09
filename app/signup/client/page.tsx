@@ -15,7 +15,7 @@ import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { auth } from "@/lib/firebase";
 import { signUpWithEmail, signInWithGoogle } from "@/lib/auth";
-import { getDocument, docs, patchDocument } from "@/lib/db";
+import { getDocument, docs, setDocument } from "@/lib/db";
 import { friendlyErrorMessage } from "@/lib/utils";
 import { PasswordStrength } from "@/components/ui/password-strength";
 import type { Client } from "@/lib/types";
@@ -122,9 +122,24 @@ export default function ClientSignupPage() {
         return;
       }
 
-      const profile = await waitForClient(authUser.uid);
-      await patchDocument(docs.client(authUser.uid), { name: name.trim(), phone: phone.trim() });
-      const finalProfile = (await getDocument<Client>(docs.client(authUser.uid))) ?? profile;
+      // Create the client profile document. NOTE: this used to rely on a
+      // Firebase trigger that was never actually deployed, so profile docs
+      // were never created and sign-up silently failed. We now create it
+      // directly with setDoc (merge) so sign-up always works.
+      await setDocument(
+        docs.client(authUser.uid),
+        {
+          userId: authUser.uid,
+          name: name.trim(),
+          phone: phone.trim(),
+          email: (authUser.email ?? email.trim()).toLowerCase(),
+          shareRides: false,
+          createdAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
+      const finalProfile = await getDocument<Client>(docs.client(authUser.uid));
       if (!finalProfile) throw new Error("Could not finish setting up your account");
 
       setClient(finalProfile);

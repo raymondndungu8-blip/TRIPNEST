@@ -59,10 +59,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setRole(null);
         return;
       }
-      const [c, d] = await Promise.all([
-        getDocument<Client>(docs.client(u.uid)),
-        getDocument<Driver>(docs.driver(u.uid)),
-      ]);
+      let c: Client | null = null;
+      let d: Driver | null = null;
+      try {
+        [c, d] = await Promise.all([
+          getDocument<Client>(docs.client(u.uid)),
+          getDocument<Driver>(docs.driver(u.uid)),
+        ]);
+      } catch (err) {
+        // A denied/slow Firestore read must never hang the app: log and
+        // continue with a null profile (the user can still retry/sign up).
+        console.error("[session] profile load failed", err);
+      }
       setClientState(c);
       setDriverState(d);
       setRole(resolveRole(c, d));

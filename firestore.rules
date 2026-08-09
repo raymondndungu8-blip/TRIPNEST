@@ -1,0 +1,80 @@
+rules_version = '2';
+
+// Firebase Firestore security rules for TripNest.
+//
+// Deployment option A (recommended): deploy with the Firebase CLI
+//   firebase deploy --only firestore:rules
+// Option B: copy-paste into Firebase Console → Firestore Database → Rules.
+//
+// NOTE: index.html/PRD prototypes assumed "trigger-created" profile docs.
+// Profiles are now created directly by legit signed-in users, so we
+// require auth for everything and scope writes to the caller's own uid.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownUid() {
+      return request.auth.uid;
+    }
+
+    // ── Clients ────────────────────────────────────────────────
+    match /clients/{userId} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    // ── Drivers ────────────────────────────────────────────────
+    match /drivers/{userId} {
+      // Clients read the driver roster (availability map / booking list).
+      allow read: if signedIn();
+      // A driver may only create/update their own profile.
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    // ── Events ─────────────────────────────────────────────────
+    match /events/{eventId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update: if signedIn();
+      allow delete: if false;
+    }
+
+    // ── Rides ──────────────────────────────────────────────────
+    match /rides/{rideId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.status == 'requested';
+      // Clients can cancel; the assigned driver can accept/start/complete.
+      allow update: if signedIn()
+        && (request.auth.uid == resource.data.driverId
+            || request.auth.uid == resource.data.clientId);
+      allow delete: if false;
+    }
+
+    // ── Favorites (doc key is `${clientId}_${driverId}`) ───────
+    match /favorites/{favId} {
+      allow read: if signedIn();
+      allow write: if signedIn() && favId.split('_')[0] == request.auth.uid;
+    }
+
+    // ── Messages / chat ────────────────────────────────────────
+    match /messages/{msgId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if false;
+    }
+
+    // ── Admin-only collections (never exposed to the client SDK) ──
+    match /blockedIps/{docId} {
+      allow read, write: if false;
+    }
+    match /auditLogs/{docId} {
+      allow read, write: if false;
+    }
+  }
+}
