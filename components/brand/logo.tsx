@@ -70,7 +70,7 @@ export function Logo({
           </span>
           {tagline && (
             <span className="mt-1 text-[0.7rem] font-medium lowercase tracking-wide text-accent">
-              better the driver you know.
+              better the driver.
             </span>
           )}
         </div>

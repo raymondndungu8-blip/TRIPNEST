@@ -18,7 +18,7 @@ export function securityHeaders(request: NextRequest) {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https: http:",
     "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self' https://firestore.googleapis.com https://api.africastalking.com https://maps.googleapis.com https://*.stripe.com",
+    "connect-src 'self' https://firestore.googleapis.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://api.africastalking.com https://maps.googleapis.com https://*.stripe.com",
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
     "object-src 'none'",
     "base-uri 'self'",
@@ -29,9 +29,12 @@ export function securityHeaders(request: NextRequest) {
   response.headers.set('Content-Security-Policy', cspDirectives)
 
   response.headers.set('X-Permitted-Cross-Domain-Policies', 'none')
-  response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp')
+  // NOTE: do NOT set Cross-Origin-Embedder-Policy: require-corp here.
+  // It blocks cross-origin resources (the Unsplash slideshow background
+  // images, Google fonts, etc.) and MapLibre GL's Web Workers, which is
+  // exactly what made the production app appear stuck at "loading".
   response.headers.set('Cross-Origin-Opener-Policy', 'same-origin')
-  response.headers.set('Cross-Origin-Resource-Policy', 'same-origin')
+  response.headers.set('Cross-Origin-Resource-Policy', 'cross-origin')
 
   return response
 }

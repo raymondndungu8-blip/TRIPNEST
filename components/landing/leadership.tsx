@@ -5,11 +5,11 @@ import { LogoMark } from "@/components/brand/logo";
 const LEADERS = [
   {
     name: "Andrew Dames",
-    roles: ["Chief Executive Officer", "Chief Financial Officer"],
+    roles: ["Co-Founder", "Chief Executive Officer"],
   },
   {
     name: "Raymond Ndungu",
-    roles: ["Chief Technology Officer", "Chief Financial Officer"],
+    roles: ["Co-Founder", "Chief Technology Officer"],
   },
 ];
 

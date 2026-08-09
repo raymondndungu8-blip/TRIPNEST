@@ -73,15 +73,25 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
 
+    // Fail-safe: never let the app hang on "loading" if Firebase Auth is slow
+    // or unreachable (the listener below depends on the network).
+    const safety = window.setTimeout(() => {
+      if (active) setLoading(false);
+    }, 8000);
+
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (!active) return;
       setUser(fbUser);
       await loadProfiles(fbUser);
-      if (active) setLoading(false);
+      if (active) {
+        setLoading(false);
+        window.clearTimeout(safety);
+      }
     });
 
     return () => {
       active = false;
+      window.clearTimeout(safety);
       unsubscribe();
     };
   }, [loadProfiles]);

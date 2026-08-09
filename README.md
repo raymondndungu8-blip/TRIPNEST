@@ -182,8 +182,8 @@ dashboard, and PWA support — see [PRD.md](PRD.md) §11 for the full roadmap.
 
 ## Leadership
 
-- **Andrew Dames** — Chief Executive Officer / Chief Financial Officer (CEO / CFO)
-- **Raymond Ndungu** — Chief Technology Officer / Chief Financial Officer (CTO / CFO)
+- **Andrew Dames** — Co-Founder / Chief Executive Officer (CEO)
+- **Raymond Ndungu** — Co-Founder / Chief Technology Officer (CTO)
 
 ---
 
