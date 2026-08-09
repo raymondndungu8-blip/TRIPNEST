@@ -14,12 +14,12 @@ export function securityHeaders(request: NextRequest) {
 
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com",
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com https://www.google.com https://www.gstatic.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https: http:",
     "font-src 'self' https://fonts.gstatic.com",
-    "connect-src 'self' https://firestore.googleapis.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://api.africastalking.com https://maps.googleapis.com https://*.stripe.com",
-    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+    "connect-src 'self' https://firestore.googleapis.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com https://www.gstatic.com https://api.africastalking.com https://maps.googleapis.com https://*.stripe.com",
+    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.google.com https://recaptcha.google.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
