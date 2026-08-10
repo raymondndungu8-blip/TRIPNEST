@@ -1,7 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
   signInWithPhoneNumber,
   RecaptchaVerifier,
   GoogleAuthProvider,
@@ -24,8 +24,10 @@ export function normalizePhone(input: string): string {
 }
 
 export async function signInWithGoogle(): Promise<void> {
+  // Redirect flow: popups are blocked by many in-app/phone browsers, and the
+  // app already handles the return via /auth/callback + onAuthStateChanged.
   const provider = new GoogleAuthProvider()
-  await signInWithPopup(auth, provider)
+  await signInWithRedirect(auth, provider)
 }
 
 export async function signUpWithEmail(

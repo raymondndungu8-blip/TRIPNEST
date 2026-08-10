@@ -51,6 +51,43 @@ export function timeAgo(value: string): string {
  * the human part; otherwise fall back to a generic message.
  */
 export function friendlyErrorMessage(err: unknown, fallback: string): string {
+  // Firebase Auth errors carry a code like "auth/wrong-password" (either on
+  // `.code` or embedded in the message when thrown by firebase/* JS SDKs).
+  let code: string | undefined;
+  if (err && typeof err === "object") {
+    const maybeCode = (err as { code?: unknown }).code;
+    if (typeof maybeCode === "string") code = maybeCode;
+  }
+  if (!code && err instanceof Error) {
+    const m = err.message.match(/\(auth\/([\w-]+)\)/);
+    if (m) code = "auth/" + m[1];
+  }
+  if (code) {
+    const known: Record<string, string> = {
+      "auth/invalid-credential": "Invalid email or password",
+      "auth/wrong-password": "Invalid email or password",
+      "auth/user-not-found": "No account found for this email",
+      "auth/invalid-email": "Enter a valid email address",
+      "auth/user-disabled": "This account has been disabled",
+      "auth/too-many-requests":
+        "Too many attempts. Please wait a moment and try again.",
+      "auth/network-request-failed":
+        "Network error. Check your connection and try again.",
+      "auth/popup-closed-by-user": "Sign-in was cancelled.",
+      "auth/popup-blocked": "The sign-in popup was blocked by your browser.",
+      "auth/unauthorized-domain":
+        "This address isn't authorized to sign in yet.",
+      "auth/operation-not-allowed": "This sign-in method is not enabled.",
+      "auth/account-exists-with-different-credential":
+        "An account already exists for this email with a different sign-in method.",
+      "auth/email-already-in-use": "An account already exists for this email",
+      "auth/weak-password": "Choose a stronger password",
+      "auth/internal-error": "Something went wrong. Please try again.",
+    };
+    const mapped = known[code];
+    if (mapped) return mapped;
+    return code.replace(/^auth\//, "Account error: ") ?? fallback;
+  }
   const raw = err instanceof Error ? err.message : String(err ?? "");
   const rateLimitMatch = raw.match(/rate_limit_exceeded:\s*(.+)/i);
   if (rateLimitMatch) return rateLimitMatch[1];

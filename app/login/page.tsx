@@ -227,7 +227,8 @@ export default function LoginPage() {
           fullWidth
           onClick={async () => {
             setGoogleBusy(true);
-            try { await signInWithGoogle(); } catch { toast("Google sign-in failed", "error"); }
+            try { await signInWithGoogle(); }
+            catch (err) { toast(friendlyErrorMessage(err, "Google sign-in failed"), "error"); }
             finally { setGoogleBusy(false); }
           }}
           loading={googleBusy}

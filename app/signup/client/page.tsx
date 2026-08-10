@@ -78,8 +78,8 @@ export default function ClientSignupPage() {
     setGoogleBusy(true);
     try {
       await signInWithGoogle();
-    } catch {
-      toast("Google sign-in failed. Use email instead.", "error");
+    } catch (err) {
+      toast(friendlyErrorMessage(err, "Google sign-in failed. Use email instead."), "error");
       setGoogleBusy(false);
     }
   }
