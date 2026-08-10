@@ -24,9 +24,10 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: import.meta.dirname,
-  // firebase-admin ships prebuilt binaries/grpc that must not be bundled into
-  // a serverless function; keep it external on the server like Firebase docs.
-  serverExternalPackages: ["firebase-admin"],
+  // NOTE: do not re-introduce firebase-admin into API routes that run on
+  // Vercel serverless. It is on Next's always-external list (not bundleable)
+  // and its jwks-rsa -> jose (ESM-only) chain fails at runtime with
+  // ERR_REQUIRE_ESM. The push route now uses lib/server/firebase-rest.ts.
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

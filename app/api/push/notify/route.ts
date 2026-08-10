@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
-import { getAdminApp } from "@/lib/server/firebase-admin"
-import { sendPushToSubscription } from "@/lib/server/webpush"
 import {
-  getAuth,
-} from "firebase-admin/auth"
-import { getFirestore } from "firebase-admin/firestore"
+  isAdminConfigured,
+  readPushSubscription,
+  verifyIdToken,
+} from "@/lib/server/firebase-rest"
+import { sendPushToSubscription } from "@/lib/server/webpush"
 
 export const runtime = "nodejs"
 
@@ -25,22 +25,14 @@ interface NotifyBody {
  */
 export async function POST(request: Request) {
   try {
-    const admin = getAdminApp()
-    if (!admin) {
-      return NextResponse.json(
-        { error: "Push delivery is not configured (missing service account)." },
-        { status: 503 }
-      )
-    }
-
     const authHeader = request.headers.get("authorization") ?? ""
     const idToken = authHeader.replace(/^Bearer\s+/i, "")
     if (!idToken) {
       return NextResponse.json({ error: "Missing bearer token" }, { status: 401 })
     }
 
-    const decoded = await getAuth(admin).verifyIdToken(idToken)
-    if (!decoded?.uid) {
+    const verified = await verifyIdToken(idToken)
+    if (!verified?.uid) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
@@ -52,24 +44,20 @@ export async function POST(request: Request) {
       )
     }
 
-    const firestore = getFirestore(admin)
-    const snap = await firestore.doc(`pushSubscriptions/${body.targetUserId}`).get()
-    if (!snap.exists) {
-      return NextResponse.json({ ok: true, delivered: 0 })
+    if (!isAdminConfigured()) {
+      return NextResponse.json(
+        { error: "Push delivery is not configured (missing service account)." },
+        { status: 503 }
+      )
     }
 
-    const data = snap.data()
-    const sub = data?.subscription
-    if (!sub?.endpoint || !sub?.keys) {
+    const sub = await readPushSubscription(body.targetUserId)
+    if (!sub) {
       return NextResponse.json({ ok: true, delivered: 0 })
     }
 
     const result = await sendPushToSubscription(
-      sub as {
-        endpoint: string
-        keys: { p256dh: string; auth: string }
-        expirationTime: number | null
-      },
+      sub,
       { title: body.title, body: body.body, url: body.url ?? "/" }
     )
 
