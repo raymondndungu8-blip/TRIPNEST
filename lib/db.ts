@@ -35,6 +35,7 @@ export const collections = {
   favorites: () => collection(db, "favorites"),
   blockedIps: () => collection(db, "blockedIps"),
   auditLogs: () => collection(db, "auditLogs"),
+  admins: () => collection(db, "admins"),
 }
 
 // ── Document references ────────────────────────────────────────
@@ -48,6 +49,7 @@ export const docs = {
   favorite: (id: string) => doc(db, "favorites", id),
   blockedIp: (ip: string) => doc(db, "blockedIps", ip),
   auditLog: (id: string) => doc(db, "auditLogs", id),
+  admin: (uid: string) => doc(db, "admins", uid),
 }
 
 // ── CRUD helpers ────────────────────────────────────────────────

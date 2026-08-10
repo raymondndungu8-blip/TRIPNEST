@@ -17,6 +17,11 @@ function toDriver(data: Record<string, unknown>): Driver {
     frequent_location: (data.frequentLocation as string) ?? null,
     vehicle_category: data.vehicleCategory as VehicleCategory,
     is_available: data.isAvailable as boolean,
+    rating_avg: (data.ratingAvg as number) ?? null,
+    rating_count: (data.ratingCount as number) ?? 0,
+    lng: (data.lng as number) ?? null,
+    lat: (data.lat as number) ?? null,
+    last_ping_at: (data.lastPingAt as string) ?? null,
     created_at: data.createdAt as string,
   }
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { patchDocument, docs } from "@/lib/db";
+import { startLivePositionPublishing } from "@/lib/location";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { Switch } from "@/components/ui/switch";
@@ -13,13 +14,33 @@ export function AvailabilityCard({ driver }: { driver: Driver }) {
   const { refreshDriver } = useSession();
   const { toast } = useToast();
   const [updating, setUpdating] = useState(false);
+  const [publisher, setPublisher] = useState<{ stop: () => void } | null>(null);
   const online = driver.is_available;
+
+  useEffect(() => {
+    return () => {
+      publisher?.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleToggle(next: boolean) {
     if (updating) return;
     setUpdating(true);
     try {
       await patchDocument(docs.driver(driver.id), { isAvailable: next });
+
+      // Stream the driver's real GPS position while online, stop when offline.
+      if (next) {
+        setPublisher(startLivePositionPublishing(driver.id));
+      } else {
+        publisher?.stop();
+        setPublisher(null);
+        await patchDocument(docs.driver(driver.id), {
+          lastPingAt: null,
+        }).catch(() => undefined);
+      }
+
       await refreshDriver();
       toast(
         next ? "You're online — requests incoming" : "You're now offline",

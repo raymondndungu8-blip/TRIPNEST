@@ -99,6 +99,8 @@ export default function DriverSignupPage() {
         frequentLocation: form.frequent_location.trim(),
         vehicleCategory: form.vehicle_category,
         isAvailable: false,
+        ratingAvg: null,
+        ratingCount: 0,
         createdAt: Timestamp.now(),
       });
       const data = await getDocument<Driver>(docs.driver(user.uid));

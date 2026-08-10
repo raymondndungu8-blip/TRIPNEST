@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Heart, MapPin } from "lucide-react";
+import { Heart, MapPin, Star } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { CategoryBadge } from "@/components/ui/badge";
 import { fadeUp } from "@/components/motion/motion";
@@ -37,6 +37,16 @@ export function DriverListItem({
         <p className="truncate text-xs text-muted-foreground">
           {driver.vehicle_type} · {driver.plate_number}
         </p>
+        {(driver.rating_count ?? 0) > 0 ? (
+          <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-amber-400">
+            <Star className="h-3.5 w-3.5 fill-current" />
+            {driver.rating_avg?.toFixed(1)} <span className="text-muted-foreground">({driver.rating_count})</span>
+          </p>
+        ) : (
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            New driver
+          </p>
+        )}
         {location && (
           <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
             <MapPin className="h-3.5 w-3.5 text-success" />

@@ -44,8 +44,8 @@ accept or reject.
 - **Login page** — email + password, forgot password (reset link via email), lockout after 5 failed attempts (30-second cooldown), password show/hide eye toggle
 - **Password strength indicator** — 4-segment visual bar on signup
 - **Reset password page** — set new password after email reset link, confirm field, eye toggles
-- **Auto-profile creation** — a Postgres trigger auto-creates the client row the instant the auth user is created (server-side, bypasses RLS timing issues)
-- **Email verification** — Supabase sends a confirmation email; redirect URL configured to `/login`
+- **Auto-profile creation** — client/driver profile docs are created on signup (client-side, scoped by Firestore rules to the caller's own uid)
+- **Email verification** — Firebase Auth sends a confirmation email; redirect URL configured to `/login`
 
 #### Drivers
 - **Phone OTP login** — WhatsApp OTP delivered via Twilio (or Africa's Talking SMS fallback)
@@ -131,7 +131,7 @@ Client enters PIN → payment confirmed → ride marked `completed`
   - Driver avatar stack + overflow count
   - "Book Ride" button → booking panel (same vehicle/ride-type/budget/schedule form)
 
-Seeded events (from Supabase):
+Seeded events (from Firestore — see `scripts/seed.mjs`):
 - Summertides Festival — Mombasa, Watamu Coastal Arena
 - Diani Beach Festival — Diani Beach
 - Nairobi Night Run — Nairobi
@@ -158,7 +158,7 @@ Accessed from Events page → Airport Transfers card.
 - **Chat view:**
   - Message bubbles (cyan = you, dark = driver)
   - Timestamps on each message
-  - Real-time updates via Supabase Realtime channel
+  - Real-time updates via Firestore subscriptions
   - Message input (max 2000 characters) + send button
   - DB-level rate limit: max 20 messages per sender per 60 seconds
 
@@ -198,9 +198,13 @@ Fields: Full name (max 100) | Vehicle type (max 60) | Car plate (max 20) | Curre
 
 ---
 
-## 4. Data model (Supabase / Postgres)
+## 4. Data model
 
-### Core tables
+> **Note:** the live app stores data in **Firebase Firestore** under the same
+> logical model below (each "table" is a collection; each row is a document keyed
+> by the owning user's Firebase UID). This section documents the logical schema.
+
+### Core collections
 
 ```
 clients
@@ -285,11 +289,16 @@ payments
 ```
 
 ### Realtime
-`rides`, `drivers`, `favorites`, `messages` are subscribed via Supabase Realtime.
+`rides`, `drivers`, `favorites`, `messages` are subscribed via Firestore `onSnapshot`.
 
 ---
 
-## 5. Edge functions (Supabase)
+## 5. Serverless functions
+
+> The live app runs on Firebase + Next.js. WhatsApp ride-code and M-Pesa
+> flows target standalone functions under `supabase/functions/` (kept for
+> reference; M-Pesa is currently deferred). The web-push path uses a native
+> Next.js route at `app/api/push/notify`.
 
 | Function | Purpose | Auth |
 |---|---|---|
@@ -297,24 +306,25 @@ payments
 | `mpesa-callback` | Receives Safaricom webhook, marks ride paid/failed | Public (Safaricom webhook) |
 | `send-ride-code` | Sends WhatsApp verification code to client on booking | JWT required |
 | `send-sms` | Auth hook — delivers OTP for driver phone login | Webhook-signature verified |
+| `app/api/push/notify` | Sends a web push (VAPID) to a user's stored subscription | Server-only (uses admin SDK) |
 
 ---
 
 ## 6. Security model
 
 ### Database
-- **RLS enabled** on all tables — every table uses Row Level Security
-- **Scoped policies**: clients see only their own data; drivers see theirs; open requests visible to all available drivers
-- **Payment field protection trigger** (`rides_protect_sensitive_columns`): blocks client/driver sessions from directly modifying `payment_status`, `mpesa_receipt`, `budget`, `verification_code`, `client_id` — only service-role (edge functions) can change these
-- **Server-side rate limiting triggers:**
-  - Messages: max 20 per sender per 60 seconds
-  - Rides: max 5 new ride requests per client per 10 minutes
-  - Favourites: max 10 adds per client per 5 minutes
-- **Input validation CHECK constraints** on all user-supplied text fields (length bounds, email format)
-- **Avatar storage scoped** to `{user_id}/avatar.{ext}` path — users cannot overwrite each other's photos
+> Enforced in the live app by **Firestore Security Rules** (`firestore.rules`).
+> The Supabase-era policy language below is kept for reference.
 
-### Edge functions
-- All secrets stored as Supabase Edge Function secrets — no hardcoded credentials in source
+- **Auth-gated access** — every collection requires a signed-in user
+- **Scoped policies**: clients see their own data; drivers see theirs; any signed-in user can read the open request feed (acceptance is transaction-guarded so only one driver claims a ride)
+- **Payment/status writes protected** — rules restrict ride updates to the owning client or the assigned driver; sensitive fields are only mutated by server-side code
+- **Rate limiting** enforced in the edge/client layer
+- **Input validation** on all user-supplied text fields (length bounds, email format)
+- **Avatar storage scoped** — users can only write to their own avatar path
+
+### Serverless
+- All secrets stored as environment variables (Vercel / function env) — no hardcoded credentials in source
 - `send-sms` auth hook: signature verification is mandatory (fails closed if `SEND_SMS_HOOK_SECRET` not configured)
 - `mpesa-stk`: driver ownership, ride state, and phone/amount all re-derived from DB server-side
 
@@ -340,8 +350,8 @@ payments
 | Animation | Framer Motion (spring micro-interactions, drag gestures) |
 | Map | MapLibre GL with Google Maps raster tiles (dark mode via CSS filter) |
 | Image crop | react-easy-crop (circular avatar cropper) |
-| Backend / DB | Supabase (Postgres + Realtime + Edge Functions + Storage) |
-| Auth | Supabase Auth — email/password + Google OAuth (clients), Phone OTP via Twilio WhatsApp (drivers) |
+| Backend / DB | Firebase — Firestore (realtime) + Storage + serverless web-push |
+| Auth | Firebase Auth — email/password + Google OAuth (clients), Phone OTP via Twilio SMS (drivers) |
 | Payments | M-Pesa Daraja STK Push (Safaricom Kenya) |
 | Messaging | Twilio WhatsApp API / Africa's Talking SMS |
 | Hosting | Vercel (auto-deploys from CLI) |
@@ -399,8 +409,7 @@ Sign up (phone OTP) → fill vehicle form → offline by default
 |---|---|
 | Production app | https://tripnest-puce.vercel.app |
 | Vercel project | tripnest (raymondndungu8-1154s-projects) |
-| Supabase project | frqlxatryxlsjntzqdgn |
-| Supabase URL | https://frqlxatryxlsjntzqdgn.supabase.co |
+| Firebase project | tripnest (Firestore + Firebase Auth + Storage) |
 
 ---
 
@@ -408,14 +417,14 @@ Sign up (phone OTP) → fill vehicle form → offline by default
 
 | Phase | Adds |
 |---|---|
-| **P1 — current (done)** | Auth, booking, realtime accept/reject, OTP verification, M-Pesa, events, airport, inbox, favourites, setup/profile, security hardening |
-| **P2 — Driver chat** | Drivers can also see and reply from their own Inbox view |
-| **P3 — Ratings** | Post-ride star ratings both ways; displayed on driver cards |
-| **P4 — Push notifications** | Native push (web push / PWA) for new ride requests, messages, payment confirmation |
-| **P5 — GPS & live tracking** | Live driver location on map, turn-by-turn ETA, real distance/time from routing API |
-| **P6 — Matching** | Distance/ETA-based driver matching (closest available driver first), surge pricing |
-| **P7 — Admin dashboard** | Ride analytics, revenue reporting, user management, event management |
-| **P8 — PWA / mobile app** | Installable PWA, push notifications, offline support |
+| **P1 — done** | Auth, booking, realtime accept/reject, OTP verification, events, airport, inbox, favourites, setup/profile, security hardening |
+| **P2 — done** | Driver chat — inbox views for drivers and riders |
+| **P3 — done** | Ratings — post-ride star ratings both ways; displayed on driver cards |
+| **P4 — done** | Push notifications — web push (VAPID) for new ride requests, messages, payment confirmation |
+| **P5 — done** | GPS & live tracking — live driver location on map, real distance/time from routing API |
+| **P6 — done** | Matching — distance-based dispatch (closest available driver first), demand surge pricing |
+| **P7 — done** | Admin dashboard — ride analytics, revenue reporting, driver roster, event management |
+| **P8 — done** | PWA / mobile app — installable PWA, push notifications, offline support |
 
 ---
 
@@ -423,21 +432,24 @@ Sign up (phone OTP) → fill vehicle form → offline by default
 
 ### Vercel (Next.js)
 ```
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_FIREBASE_API_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+NEXT_PUBLIC_FIREBASE_APP_ID
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+NEXT_PUBLIC_VAPID_PUBLIC_KEY    (web push)
+VAPID_PRIVATE_KEY               (web push)
 ```
 
-### Supabase Edge Function secrets
+### M-Pesa — currently deferred (toggled last)
 ```
-TWILIO_ACCOUNT_SID
-TWILIO_AUTH_TOKEN
-TWILIO_WHATSAPP_FROM
-SEND_SMS_HOOK_SECRET
 MPESA_CONSUMER_KEY
 MPESA_CONSUMER_SECRET
 MPESA_SHORTCODE          (default: 174379 in sandbox)
 MPESA_ENV                (sandbox | production)
-MPESA_CALLBACK_URL       (defaults to mpesa-callback function URL)
+MPESA_CALLBACK_URL
 ```
 
 ---

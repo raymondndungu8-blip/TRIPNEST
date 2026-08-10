@@ -60,13 +60,17 @@ function carMarker() {
 export function RideMap({
   pickup,
   destination,
+  livePosition,
   className,
 }: {
   pickup: string;
   destination: string;
+  /** Real-time driver position (lng, lat) — overrides the simulated car. */
+  livePosition?: LngLat | null;
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const carRef = useRef<import("maplibre-gl").Marker | null>(null);
   const [info, setInfo] = useState<{ km: number; min: number } | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -148,19 +152,24 @@ export function RideMap({
             const car = new maplibregl.Marker({ element: carMarker() })
               .setLngLat(coords[0] as LngLat)
               .addTo(m);
-            let t = 0;
-            const speed = 0.02 * Math.max(1, 60 / coords.length);
-            const tick = () => {
-              t += speed;
-              if (t >= coords.length - 1) t = 0;
-              const i = Math.floor(t);
-              const f = t - i;
-              const c0 = coords[i];
-              const c1 = coords[Math.min(i + 1, coords.length - 1)];
-              car.setLngLat([c0[0] + (c1[0] - c0[0]) * f, c0[1] + (c1[1] - c0[1]) * f]);
+            carRef.current = car;
+
+            // Only run the simulated trip when we have no real GPS feed.
+            if (!livePosition) {
+              let t = 0;
+              const speed = 0.02 * Math.max(1, 60 / coords.length);
+              const tick = () => {
+                t += speed;
+                if (t >= coords.length - 1) t = 0;
+                const i = Math.floor(t);
+                const f = t - i;
+                const c0 = coords[i];
+                const c1 = coords[Math.min(i + 1, coords.length - 1)];
+                car.setLngLat([c0[0] + (c1[0] - c0[0]) * f, c0[1] + (c1[1] - c0[1]) * f]);
+                raf = requestAnimationFrame(tick);
+              };
               raf = requestAnimationFrame(tick);
-            };
-            raf = requestAnimationFrame(tick);
+            }
           }
         });
       } catch (err) {
@@ -175,6 +184,12 @@ export function RideMap({
       map?.remove();
     };
   }, [pickup, destination]);
+
+  // Move the car marker to the driver's real position as they drive.
+  useEffect(() => {
+    if (!livePosition || !carRef.current) return;
+    carRef.current.setLngLat(livePosition);
+  }, [livePosition]);
 
   return (
     <div

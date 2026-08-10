@@ -2,6 +2,8 @@ import { docs, collections, getDocument, queryDocuments, createDocument, patchDo
 import { where, orderBy } from "firebase/firestore"
 import { runTransaction } from "firebase/firestore"
 import { db } from "./firestore"
+import { haversineKm } from "./geo"
+import type { LngLat } from "./geo"
 import type {
   Ride,
   RideType,
@@ -23,6 +25,8 @@ export interface CreateRideInput {
   rideType: RideType
   budget: number
   eventId?: string | null
+  pickupLat?: number | null
+  pickupLng?: number | null
 }
 
 function toRide(data: Record<string, unknown>): Ride {
@@ -43,10 +47,12 @@ function toRide(data: Record<string, unknown>): Ride {
     payment_status: (data.paymentStatus as PaymentStatus) ?? "unpaid",
     mpesa_receipt: (data.mpesaReceipt as string) ?? null,
     created_at: data.createdAt as string,
+    pickup_lat: (data.pickupLat as number) ?? null,
+    pickup_lng: (data.pickupLng as number) ?? null,
   }
 }
 
-function toClient(data: Record<string, unknown>): Client {
+export function toClient(data: Record<string, unknown>): Client {
   return {
     id: data.id as string,
     name: data.name as string,
@@ -55,6 +61,8 @@ function toClient(data: Record<string, unknown>): Client {
     avatar_url: (data.avatarUrl as string) ?? null,
     emergency_contact: (data.emergencyContact as string) ?? null,
     share_rides: data.shareRides as boolean,
+    rating_avg: (data.ratingAvg as number) ?? null,
+    rating_count: (data.ratingCount as number) ?? 0,
     created_at: data.createdAt as string,
   }
 }
@@ -70,6 +78,11 @@ function toDriver(data: Record<string, unknown>): Driver {
     frequent_location: (data.frequentLocation as string) ?? null,
     vehicle_category: data.vehicleCategory as VehicleCategory,
     is_available: data.isAvailable as boolean,
+    rating_avg: (data.ratingAvg as number) ?? null,
+    rating_count: (data.ratingCount as number) ?? 0,
+    lng: (data.lng as number) ?? null,
+    lat: (data.lat as number) ?? null,
+    last_ping_at: (data.lastPingAt as string) ?? null,
     created_at: data.createdAt as string,
   }
 }
@@ -236,6 +249,16 @@ export async function fetchClientRides(
 export async function fetchOpenRequests(
   driverId: string
 ): Promise<RideWithRelations[]> {
+  // Driver position (live ping) used to rank incoming requests nearest-first.
+  const driver = await getDocument<{
+    lat?: number;
+    lng?: number;
+  }>(docs.driver(driverId)).catch(() => null);
+  const driverPos =
+    driver?.lat != null && driver?.lng != null
+      ? ([driver.lng, driver.lat] as LngLat)
+      : null;
+
   const raw = await queryDocuments<Record<string, unknown>>(
     collections.rides(),
     where("status", "==", "requested"),
@@ -243,7 +266,24 @@ export async function fetchOpenRequests(
   )
   const unclaimed = raw.filter((r) => !r.driverId)
   const rides = await populateRideRelations(unclaimed)
-  return rides.filter((r) => !(r.rejected_by ?? []).includes(driverId))
+  const open = rides.filter((r) => !(r.rejected_by ?? []).includes(driverId))
+
+  if (!driverPos) return open
+
+  // Smart matching: rank rides by how far the pickup is from this driver,
+  // and only surface requests within the dispatch radius.
+  const MAX_RADIUS_KM = 40
+  const withDist = open.flatMap((ride) => {
+    if (ride.pickup_lat == null || ride.pickup_lng == null) return []
+    const distanceKm = haversineKm(driverPos, [ride.pickup_lng, ride.pickup_lat])
+    if (distanceKm > MAX_RADIUS_KM) return []
+    ride.driver_distance_km = distanceKm
+    ride.driver_eta_min = Math.max(1, Math.round(distanceKm * 3))
+    return [ride]
+  })
+  return withDist.sort(
+    (a, b) => (a.driver_distance_km ?? Infinity) - (b.driver_distance_km ?? Infinity)
+  )
 }
 
 export async function fetchDriverRides(

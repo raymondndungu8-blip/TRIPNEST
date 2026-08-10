@@ -8,8 +8,8 @@ import { useToast } from "@/components/providers/toast-provider";
 import { sendPhoneOtp, verifyPhoneOtp, normalizePhone } from "@/lib/auth";
 
 /**
- * Phone → SMS code verification. On success, a Supabase auth session exists
- * (the SessionProvider picks it up via onAuthStateChange). `onVerified` lets
+ * Phone → SMS code verification. On success, a Firebase Auth session exists
+ * (the SessionProvider picks it up via onAuthStateChanged). `onVerified` lets
  * the parent advance immediately.
  */
 export function PhoneOtp({

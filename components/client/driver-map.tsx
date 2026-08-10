@@ -5,6 +5,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { MapPin, CarFront, Radar } from "lucide-react";
 import { useNearbyDrivers } from "@/hooks/use-rides";
 import { geocode, haversineKm, type LngLat } from "@/lib/geo";
+import { isPositionFresh } from "@/lib/location";
 import { cn } from "@/lib/utils";
 import type { Client, Driver, VehicleCategory } from "@/lib/types";
 
@@ -47,6 +48,14 @@ function jitter(id: string): [number, number] {
 }
 
 async function geocodeDriver(driver: Driver): Promise<LngLat | null> {
+  // Real-time GPS takes priority — use it as-is when the ping is fresh.
+  if (
+    driver.lat != null &&
+    driver.lng != null &&
+    isPositionFresh({ lat: driver.lat, lng: driver.lng }, driver.last_ping_at)
+  ) {
+    return [driver.lng, driver.lat];
+  }
   const loc = driver.current_location || driver.frequent_location;
   if (!loc) return null;
   const key = loc.trim().toLowerCase();

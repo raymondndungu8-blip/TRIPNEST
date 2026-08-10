@@ -21,6 +21,21 @@ service cloud.firestore {
       return request.auth.uid;
     }
 
+    // Admin dashboard access: granted only when a matching doc exists in the
+    // admins collection (doc key = the admin's own Firebase uid). Provision
+    // admins from the deploy/seed tooling side; clients can never self-grant.
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // ── Admins (doc key === admin's Firebase UID) ─────────────
+    match /admins/{userId} {
+      allow read: if signedIn();
+      // Only the matching admin may update their own record.
+      allow write: if isAdmin() && request.auth.uid == userId;
+    }
+
     // ── Clients ────────────────────────────────────────────────
     match /clients/{userId} {
       allow read: if signedIn();
@@ -40,7 +55,7 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if signedIn();
       allow update: if signedIn();
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     // ── Rides ──────────────────────────────────────────────────
@@ -69,12 +84,33 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── Push subscriptions (own-device only) ───────────────────
+    match /pushSubscriptions/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow write: if signedIn() && request.auth.uid == userId;
+      allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    // ── Ratings (doc key `${rideId}__${raterId}`) ──────────────
+    match /ratings/{ratingId} {
+      allow read: if signedIn();
+      // Writer must be the rater and may only rate once per ride.
+      allow write: if signedIn()
+        && ratingId.split('__')[1] == request.auth.uid
+        && request.resource.data.raterId == request.auth.uid
+        && request.resource.data.stars >= 1
+        && request.resource.data.stars <= 5;
+      allow delete: if false;
+    }
+
     // ── Admin-only collections (never exposed to the client SDK) ──
     match /blockedIps/{docId} {
-      allow read, write: if false;
+      allow read: if isAdmin();
+      allow write: if false;
     }
     match /auditLogs/{docId} {
-      allow read, write: if false;
+      allow read: if isAdmin();
+      allow write: if false;
     }
   }
 }

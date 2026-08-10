@@ -4,7 +4,8 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.tile.openstreetmap.org https://basemaps.cartocdn.com https://*.cartocdn.com https://router.project-osrm.org https://nominatim.openstreetmap.org https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.tile.openstreetmap.org https://basemaps.cartocdn.com https://*.cartocdn.com https://router.project-osrm.org https://nominatim.openstreetmap.org https://mt0.google.com https://mt1.google.com https://mt2.google.com https://mt3.google.com https://*.googleapis.com https://*.firebaseio.com wss://firestore.googleapis.com https://fcm.googleapis.com https://*.google.com",
+  "worker-src 'self' blob:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -23,6 +24,9 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: import.meta.dirname,
+  // firebase-admin ships prebuilt binaries/grpc that must not be bundled into
+  // a serverless function; keep it external on the server like Firebase docs.
+  serverExternalPackages: ["firebase-admin"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

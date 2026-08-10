@@ -134,6 +134,8 @@ export default function ClientSignupPage() {
           phone: phone.trim(),
           email: (authUser.email ?? email.trim()).toLowerCase(),
           shareRides: false,
+          ratingAvg: null,
+          ratingCount: 0,
           createdAt: new Date().toISOString(),
         },
         { merge: true }

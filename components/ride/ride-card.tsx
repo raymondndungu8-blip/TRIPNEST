@@ -45,6 +45,12 @@ export function RideCard({
           </span>
         )}
         {showStatus && <StatusBadge status={ride.status} />}
+        {!showStatus && ride.driver_distance_km != null && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-semibold text-accent">
+            <Navigation className="h-3 w-3" />
+            {ride.driver_distance_km.toFixed(1)} km · ~{ride.driver_eta_min} min
+          </span>
+        )}
       </div>
 
       {ride.event?.name && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   Phone,
@@ -13,9 +13,12 @@ import {
   Route,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { onSnapshot, doc } from "firebase/firestore";
+import { db } from "@/lib/firestore";
 import { RideMap } from "@/components/ride/ride-map-dynamic";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { isPositionFresh, type LivePosition } from "@/lib/location";
 import { formatKES } from "@/lib/utils";
 import type { RideWithRelations } from "@/lib/types";
 
@@ -58,11 +61,34 @@ export function ActiveRideTracker({
   cancelLoading: boolean;
 }) {
   const [showSOS, setShowSOS] = useState(false);
+  const [livePosition, setLivePosition] = useState<LivePosition | null>(null);
 
   const canCancel = ride.status === "requested" || ride.status === "accepted";
   const realDriver = ride.driver;
   const driver = realDriver ?? MOCK_DRIVER;
   const showDriver = ride.status === "accepted" || ride.status === "in_progress";
+
+  // Live-track the assigned driver's GPS while the trip is active.
+  useEffect(() => {
+    if (!realDriver?.id) {
+      setLivePosition(null);
+      return;
+    }
+    const unsub = onSnapshot(doc(db, "drivers", realDriver.id), (snap) => {
+      if (!snap.exists()) {
+        setLivePosition(null);
+        return;
+      }
+      const d = snap.data();
+      const pos = { lat: d.lat as number, lng: d.lng as number };
+      if (isPositionFresh(pos, d.lastPingAt as string)) {
+        setLivePosition({ lat: pos.lat, lng: pos.lng, timestamp: Date.now() });
+      } else {
+        setLivePosition(null);
+      }
+    });
+    return unsub;
+  }, [realDriver?.id]);
 
   const etaMin =
     ride.status === "requested"
@@ -140,7 +166,12 @@ export function ActiveRideTracker({
 
       {/* Map */}
       <div className="mx-4 mt-3 overflow-hidden rounded-2xl" style={{ height: 280 }}>
-        <RideMap pickup={ride.pickup} destination={ride.destination} className="!h-full" />
+        <RideMap
+          pickup={ride.pickup}
+          destination={ride.destination}
+          livePosition={livePosition ? [livePosition.lng, livePosition.lat] : null}
+          className="!h-full"
+        />
       </div>
 
       {/* Distance + Time stats — prominent */}

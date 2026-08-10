@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, X } from "lucide-react";
 import { acceptRide, rejectRide } from "@/lib/rides";
+import { notifyUser } from "@/lib/notify";
 import { useToast } from "@/components/providers/toast-provider";
 import { RideCard } from "@/components/ride/ride-card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,15 @@ export function RequestCard({
         toast("This ride was just taken by another driver", "warning");
       } else {
         toast("Ride accepted", "success");
+        // Notify the client that a driver accepted their request.
+        if (ride.client?.id) {
+          notifyUser({
+            targetUserId: ride.client.id,
+            title: "Ride accepted 🚗",
+            body: `Your driver is on the way to ${ride.pickup}.`,
+            url: "/client",
+          }).catch(() => {});
+        }
       }
     } catch (err) {
       console.error("[request] accept failed", err);

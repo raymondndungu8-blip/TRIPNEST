@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCheck, KeyRound, X, Smartphone, MapPin } from "lucide-react";
+import { CheckCheck, KeyRound, X, Smartphone, MapPin, Star } from "lucide-react";
 import { startRideWithCode } from "@/lib/rides";
 import { payWithMpesa } from "@/lib/mpesa";
+import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { RideCard } from "@/components/ride/ride-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
+import { RatingModal } from "@/components/rating/rating-modal";
 import { formatKES } from "@/lib/utils";
 import type { RideWithRelations } from "@/lib/types";
 
@@ -20,9 +22,11 @@ export function TripCard({
   onResolved: () => void;
 }) {
   const { toast } = useToast();
+  const { driver: sessionDriver } = useSession();
   const [entering, setEntering] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const [ratingOpen, setRatingOpen] = useState(false);
 
   // Driver enters the client's code at pickup → ride starts.
   async function handleStart() {
@@ -148,23 +152,51 @@ export function TripCard({
     }
   } else if (ride.status === "completed") {
     footer = (
-      <div className="flex items-center gap-2 rounded-xl border border-success/25 bg-success/10 px-3.5 py-2.5 text-sm text-success">
-        <Smartphone className="h-4 w-4" />
-        Paid · {formatKES(ride.budget)}
-        {ride.mpesa_receipt ? ` · ${ride.mpesa_receipt}` : ""}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 rounded-xl border border-success/25 bg-success/10 px-3.5 py-2.5 text-sm text-success">
+          <Smartphone className="h-4 w-4" />
+          Paid · {formatKES(ride.budget)}
+          {ride.mpesa_receipt ? ` · ${ride.mpesa_receipt}` : ""}
+        </div>
+        {ride.client?.id && (
+          <Button
+            variant="secondary"
+            size="sm"
+            fullWidth
+            className="border-accent/25 bg-accent/10 text-accent hover:bg-accent/20"
+            onClick={() => setRatingOpen(true)}
+          >
+            <Star className="h-4 w-4 fill-current" />
+            Rate {ride.client.name.split(" ")[0]}
+          </Button>
+        )}
       </div>
     );
   }
 
   return (
-    <RideCard
-      ride={ride}
-      showStatus
-      person={{
-        name: ride.client?.name ?? "Customer",
-        subtitle: ride.client?.phone,
-      }}
-      footer={footer}
-    />
+    <>
+      <RideCard
+        ride={ride}
+        showStatus
+        person={{
+          name: ride.client?.name ?? "Customer",
+          subtitle: ride.client?.phone,
+        }}
+        footer={footer}
+      />
+
+      {ride.client?.id && sessionDriver && (
+        <RatingModal
+          open={ratingOpen}
+          rideId={ride.id}
+          raterId={sessionDriver.id}
+          targetId={ride.client.id}
+          targetRole="client"
+          targetName={ride.client.name ?? "Rider"}
+          onClose={() => setRatingOpen(false)}
+        />
+      )}
+    </>
   );
 }

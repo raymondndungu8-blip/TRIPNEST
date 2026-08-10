@@ -27,6 +27,8 @@ import {
   Route,
   UserCircle,
   MessageCircle,
+  Star,
+  TrendingUp,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Avatar } from "@/components/ui/avatar";
@@ -39,6 +41,7 @@ import { FadeIn, StaggerList, MotionItem, fadeUp } from "@/components/motion/mot
 import { RideMap } from "@/components/ride/ride-map-dynamic";
 import { DriverMap } from "@/components/client/driver-map-dynamic";
 import { ActiveRideTracker } from "@/components/ride/active-ride-tracker";
+import { RatingModal } from "@/components/rating/rating-modal";
 import { RequireRole } from "@/components/auth/require-role";
 import { DriverListItem } from "@/components/client/driver-list-item";
 import { useSession } from "@/components/providers/session-provider";
@@ -46,8 +49,9 @@ import { useToast } from "@/components/providers/toast-provider";
 import { useClientRides, useRealtimeDrivers } from "@/hooks/use-rides";
 import { createRide, cancelRide, sendRideCodeWhatsApp } from "@/lib/rides";
 import { addFavorite, removeFavorite } from "@/lib/favorites";
+import { notifyAvailableDrivers } from "@/lib/notify";
 import { getCurrentLocationLabel, geocode, getRoute, type LngLat } from "@/lib/geo";
-import { TIER_PRICING, computeFare } from "@/lib/pricing";
+import { TIER_PRICING, computeFare, getSurgeMultiplier } from "@/lib/pricing";
 import { Spinner } from "@/components/ui/spinner";
 import { cn, formatKES, friendlyErrorMessage } from "@/lib/utils";
 import type {
@@ -282,6 +286,7 @@ function YourRides({ client }: { client: Client }) {
   const { rides, loading, refetch } = useClientRides(client.id);
   const { toast } = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [ratingFor, setRatingFor] = useState<RideWithRelations | null>(null);
 
   async function handleCancel(rideId: string) {
     setBusyId(rideId);
@@ -412,6 +417,16 @@ function YourRides({ client }: { client: Client }) {
               footer = (
                 <div className="space-y-3">
                   {paymentBlock(ride)}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth
+                    className="border-accent/25 bg-accent/10 text-accent hover:bg-accent/20"
+                    onClick={() => setRatingFor(ride)}
+                  >
+                    <Star className="h-4 w-4 fill-current" />
+                    Rate {ride.driver?.name?.split(" ")[0] ?? "driver"}
+                  </Button>
                   {canFavorite && (
                     <Button
                       variant="outline"
@@ -438,6 +453,19 @@ function YourRides({ client }: { client: Client }) {
             );
           })}
         </StaggerList>
+      )}
+
+      {/* Rating modal */}
+      {ratingFor?.driver_id && (
+        <RatingModal
+          open={!!ratingFor}
+          rideId={ratingFor.id}
+          raterId={client.id}
+          targetId={ratingFor.driver_id}
+          targetRole="driver"
+          targetName={ratingFor.driver?.name ?? "Driver"}
+          onClose={() => setRatingFor(null)}
+        />
       )}
     </div>
   );
@@ -506,6 +534,18 @@ function ClientDashboard() {
     durationMin: number;
   } | null>(null);
   const [estimating, setEstimating] = useState(false);
+  const [surge, setSurge] = useState(1);
+
+  // Surge pricing: reflect current demand for the selected vehicle tier.
+  useEffect(() => {
+    let cancelled = false;
+    getSurgeMultiplier(selectedVehicle).then((m) => {
+      if (!cancelled) setSurge(m);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedVehicle]);
 
   // Live fare estimate: geocode pickup + destination, get the road route,
   // and derive distance/duration so per-tier fares are real, not hardcoded.
@@ -558,7 +598,7 @@ function ClientDashboard() {
   const vehicles = VEHICLE_META.map((v) => ({
     ...v,
     price: estimate
-      ? computeFare(v.category, estimate.distanceKm, estimate.durationMin)
+      ? computeFare(v.category, estimate.distanceKm, estimate.durationMin, surge)
       : TIER_PRICING[v.category].min,
   }));
 
@@ -611,6 +651,8 @@ function ClientDashboard() {
         rideType: rideType,
         budget: finalBudget,
         eventId: null,
+        pickupLat: pickupCoords?.lat ?? null,
+        pickupLng: pickupCoords?.lng ?? null,
       });
       toast("Ride booked — finding you a driver", "success");
 
@@ -623,6 +665,16 @@ function ClientDashboard() {
           trimmedDestination
         ).catch(() => {});
       }
+
+      // Notify available drivers so they can accept in realtime.
+      notifyAvailableDrivers(
+        {
+          title: "New ride request 🚗",
+          body: `${trimmedPickup} → ${trimmedDestination}`,
+          url: "/driver",
+        },
+        selectedVehicle
+      ).catch(() => {});
 
       setDestination("");
       setScheduledAt("");
@@ -831,6 +883,21 @@ function ClientDashboard() {
           </span>
         )}
       </div>
+      {surge > 1 && estimate && (
+        <div className="mb-4 flex items-center gap-2.5 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-warning/20">
+            <TrendingUp className="h-4 w-4 text-warning" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              Demand is high — {surge.toFixed(1)}× surge
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Fares are up as more riders than drivers are currently online.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="mb-6 space-y-3">
         {vehicles.map((v) => {
           const active = selectedVehicle === v.category;

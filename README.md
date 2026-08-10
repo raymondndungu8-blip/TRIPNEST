@@ -69,7 +69,7 @@ while drivers go online and accept or reject requests in real time.
 | Backend    | [Firebase](https://firebase.google.com) — Auth, Firestore, Storage             |
 | Maps       | [MapLibre GL](https://maplibre.org)                                            |
 | Fonts      | Sora (display) + Inter (body) via `next/font`                                  |
-| Auth       | Firebase Auth + Supabase callback handling                                     |
+| Auth       | Firebase Auth (email / Google) + Phone OTP via SMS                                |
 
 ---
 
@@ -175,8 +175,10 @@ read and write their own data.
 
 ## Roadmap
 
-Ratings, push notifications, live GPS tracking, distance-based matching, surge pricing, admin
-dashboard, and PWA support — see [PRD.md](PRD.md) §11 for the full roadmap.
+All original roadmap phases are now implemented — ratings, push notifications, live GPS
+tracking, distance-based matching, surge pricing, an admin dashboard, and PWA support are
+shipped. See [PRD.md](PRD.md) §11 for the status table; the remaining item is M-Pesa live
+payments (deliberately deferred).
 
 ---
 

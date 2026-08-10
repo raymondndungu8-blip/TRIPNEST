@@ -20,6 +20,10 @@ import {
   Car,
   MapPin,
   Hash,
+  FileText,
+  Shield,
+  Ban,
+  LayoutDashboard,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -421,6 +425,42 @@ function HelpPanel({ onBack }: { onBack: () => void }) {
               <MessageCircle className="h-4 w-4 text-accent" />
               WhatsApp support available 8AM - 10PM
             </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-surface-2/40 p-4">
+          <p className="mb-3 text-sm font-semibold text-foreground">
+            Legal
+          </p>
+          <div className="space-y-2.5">
+            <a
+              href="/legal/terms"
+              className="flex items-center gap-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <FileText className="h-4 w-4 text-accent" />
+              Terms of Service
+            </a>
+            <a
+              href="/legal/privacy"
+              className="flex items-center gap-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Shield className="h-4 w-4 text-accent" />
+              Privacy Policy
+            </a>
+            <a
+              href="/legal/cancellations"
+              className="flex items-center gap-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Ban className="h-4 w-4 text-accent" />
+              Cancellation & Refunds
+            </a>
+            <a
+              href="/admin"
+              className="flex items-center gap-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <LayoutDashboard className="h-4 w-4 text-accent" />
+              Admin Dashboard
+            </a>
           </div>
         </div>
 

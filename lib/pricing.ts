@@ -1,4 +1,5 @@
 import type { VehicleCategory } from "./types";
+import { collections, queryDocuments, where } from "./db";
 
 /** A geographic point in {lat, lng} form. */
 export interface LatLng {
@@ -126,4 +127,52 @@ export function estimateEtaMinutes(distanceKm?: number): number {
     return base;
   }
   return Math.max(1, Math.round(base + distanceKm * 0.8));
+}
+
+/**
+ * Demand-driven surge pricing.
+ *
+ * Compares the number of open (unclaimed) requests in a category against the
+ * available online drivers supplying it. When requests outnumber drivers,
+ * a surge multiplier between 1.0x and 1.8x is applied so fares reflect demand
+ * (closest-driver matching stays fair). Results are cached briefly so the
+ * estimate flow doesn't hammer Firestore on every keystroke.
+ */
+const SURGE_CACHE_TTL_MS = 120_000;
+const MAX_SURGE = 1.8;
+let surgeCache: { key: string; multiplier: number; at: number } | null = null;
+
+export async function getSurgeMultiplier(
+  category: VehicleCategory
+): Promise<number> {
+  const now = Date.now();
+  if (
+    surgeCache &&
+    surgeCache.key === category &&
+    now - surgeCache.at < SURGE_CACHE_TTL_MS
+  ) {
+    return surgeCache.multiplier;
+  }
+  try {
+    const [openRides, available] = await Promise.all([
+      queryDocuments<{ driverId?: string | null }>(
+        collections.rides(),
+        where("status", "==", "requested"),
+        where("vehicleCategory", "==", category)
+      ),
+      queryDocuments(
+        collections.drivers(),
+        where("isAvailable", "==", true),
+        where("vehicleCategory", "==", category)
+      ),
+    ]);
+    const demand = openRides.filter((r) => !r.driverId).length;
+    const supply = Math.max(1, available.length);
+    const multiplier = Math.min(MAX_SURGE, 1 + (demand / supply) * 0.2);
+    surgeCache = { key: category, multiplier, at: now };
+    return multiplier;
+  } catch {
+    surgeCache = { key: category, multiplier: 1, at: now };
+    return 1;
+  }
 }

@@ -22,6 +22,7 @@ import {
   type Message,
 } from "@/lib/messages";
 import { cn, friendlyErrorMessage } from "@/lib/utils";
+import { notifyUser } from "@/lib/notify";
 
 function timeAgo(dateStr: string): string {
   if (!dateStr) return "";
@@ -100,6 +101,12 @@ function ChatView({
     try {
       await sendMessage(clientId, driverId, "client", trimmed);
       setText("");
+      notifyUser({
+        targetUserId: driverId,
+        title: "New message 📩",
+        body: trimmed,
+        url: "/driver/inbox",
+      }).catch(() => {});
     } catch (err) {
       toast(friendlyErrorMessage(err, "Could not send message"), "error");
     } finally {

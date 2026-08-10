@@ -17,6 +17,8 @@ export interface Client {
   avatar_url: string | null;
   emergency_contact: string | null;
   share_rides: boolean;
+  rating_avg: number | null;
+  rating_count: number;
   created_at: string;
 }
 
@@ -30,6 +32,12 @@ export interface Driver {
   frequent_location: string | null;
   vehicle_category: VehicleCategory;
   is_available: boolean;
+  rating_avg: number | null;
+  rating_count: number;
+  /** Live GPS position while online (lng, lat order to match map use). */
+  lng: number | null;
+  lat: number | null;
+  last_ping_at: string | null;
   created_at: string;
 }
 
@@ -60,6 +68,8 @@ export interface Ride {
   payment_status: PaymentStatus;
   mpesa_receipt: string | null;
   created_at: string;
+  pickup_lat: number | null;
+  pickup_lng: number | null;
 }
 
 export type PaymentStatus = "unpaid" | "pending" | "paid" | "failed";
@@ -69,6 +79,10 @@ export interface RideWithRelations extends Ride {
   client?: Client | null;
   driver?: Driver | null;
   event?: EventItem | null;
+  /** Distance from the viewing driver's position (smart-match feed only). */
+  driver_distance_km?: number;
+  /** Estimated minutes for the driver to reach pickup (smart-match feed only). */
+  driver_eta_min?: number;
 }
 
 export const VEHICLE_CATEGORIES: {
