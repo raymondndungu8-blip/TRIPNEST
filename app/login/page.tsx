@@ -17,6 +17,7 @@ import { signInWithEmail, resetPassword, signInWithGoogle } from "@/lib/auth";
 import { ensureClientProfile } from "@/lib/profiles";
 import { getDocument, docs } from "@/lib/db";
 import { friendlyErrorMessage } from "@/lib/utils";
+import type { Client } from "@/lib/types";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 30_000;
@@ -56,10 +57,12 @@ export default function LoginPage() {
   }, [lockedUntil]);
 
   useEffect(() => {
+    // Only redirect once a profile is actually present (client or driver).
+    // Navigating to /client while the session is still loading its profile
+    // made RequireRole bounce the user to /signup/client — a redirect race.
     if (!loading && user) {
       if (client) router.replace("/client");
       else if (driver) router.replace("/driver");
-      else router.replace("/client");
     }
   }, [loading, user, client, driver, router]);
 
@@ -83,8 +86,11 @@ export default function LoginPage() {
       setFailedAttempts(0);
       toast("Welcome back!", "success");
 
-      const existing = await getDocument(docs.client(fbUser.uid));
+      const existing = await getDocument<Client>(docs.client(fbUser.uid));
       if (existing) {
+        // Seed the session profile BEFORE navigating so /client is rendered
+        // with the profile ready (avoids the /signup redirect race).
+        setClient(existing);
         router.replace("/client");
         return;
       }
