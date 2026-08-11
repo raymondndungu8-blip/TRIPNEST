@@ -18,9 +18,11 @@ import {
   fetchDriverConversations,
   fetchMessages,
   sendMessage,
+  markConversationRead,
   type DriverConversationPreview,
   type Message,
 } from "@/lib/messages";
+import { UnreadBadge } from "@/components/ui/unread-badge";
 import { cn, friendlyErrorMessage } from "@/lib/utils";
 import { notifyUser } from "@/lib/notify";
 import type { Driver } from "@/lib/types";
@@ -81,6 +83,7 @@ function ChatView({
         const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Message[];
         setMessages(msgs);
         setLoading(false);
+        markConversationRead(clientId, driverId, "driver");
         setTimeout(scrollToBottom, 100);
       },
       () => {
@@ -257,13 +260,16 @@ function InboxContent({ driver }: { driver: Driver }) {
 
   return (
     <AppShell>
-      <div className="mb-1">
-        <h1 className="font-display text-2xl font-extrabold text-foreground">
-          Inbox
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Chat with your riders to coordinate pickups
-        </p>
+      <div className="mb-1 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-extrabold text-foreground">
+            Inbox
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Chat with your riders to coordinate pickups
+          </p>
+        </div>
+        <UnreadBadge role="driver" userId={driver.id} />
       </div>
 
       <div className="mt-5">
@@ -297,6 +303,9 @@ function InboxContent({ driver }: { driver: Driver }) {
                         <p className="truncate font-semibold text-foreground">
                           {convo.client_name}
                         </p>
+                        {convo.unread && (
+                          <span className="ml-1 inline-block h-2 w-2 shrink-0 rounded-full bg-accent" />
+                        )}
                         {convo.is_favorite && (
                           <Heart className="h-3.5 w-3.5 shrink-0 fill-destructive text-destructive" />
                         )}
