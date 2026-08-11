@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Home, CalendarHeart, Route, UserCircle, MessageCircle, Wallet } from "lucide-react";
 import { useSession } from "@/components/providers/session-provider";
+import { useUnreadCount } from "@/hooks/use-unread";
 import { cn } from "@/lib/utils";
 
 const CLIENT_TABS = [
@@ -23,7 +24,12 @@ const DRIVER_TABS = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { role } = useSession();
+  const { role, client, driver } = useSession();
+
+  // Live unread count for the active role, shown on the Inbox tab app-wide.
+  const unreadRole = role === "driver" ? "driver" : "client";
+  const unreadId = role === "driver" ? (driver?.id ?? "") : (client?.id ?? "");
+  const unread = useUnreadCount(unreadRole, unreadId);
 
   // Hide on landing / signup screens.
   if (
@@ -63,7 +69,14 @@ export function BottomNav() {
                     transition={{ type: "spring", stiffness: 350, damping: 30 }}
                   />
                 )}
-                <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
+                <span className="relative">
+                  <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
+                  {tab.href.includes("/inbox") && unread > 0 && (
+                    <span className="absolute -right-2 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-white shadow-[0_4px_12px_rgba(220,38,38,0.5)]">
+                      {unread > 99 ? "99+" : unread}
+                    </span>
+                  )}
+                </span>
                 {tab.label}
               </Link>
             );
