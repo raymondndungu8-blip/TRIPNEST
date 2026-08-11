@@ -7,9 +7,10 @@ import {
   useEffect,
   useState,
 } from "react";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onAuthStateChanged, getRedirectResult, type User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { signOut as authSignOut } from "@/lib/auth";
+import { ensureClientProfile } from "@/lib/profiles";
 import { getDocument, docs } from "@/lib/db";
 import type { Client, Driver, Role } from "@/lib/types";
 
@@ -71,6 +72,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         // continue with a null profile (the user can still retry/sign up).
         console.error("[session] profile load failed", err);
       }
+      // No profile on record? Treat the visitor as a client and provision one
+      // so sign-in always lands them straight on the dashboard (Google users
+      // have none yet). Drivers already have a driver doc, so we skip them.
+      if (!c && !d) {
+        try {
+          c = await ensureClientProfile(u);
+        } catch (err) {
+          console.error("[session] client profile provisioning failed", err);
+        }
+      }
+
       setClientState(c);
       setDriverState(d);
       setRole(resolveRole(c, d));
@@ -80,6 +92,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
+
+    // Finish any pending Google redirect sign-in (the listener below completes
+    // the flow) and surface errors instead of silently swallowing them.
+    getRedirectResult(auth)
+      .then((res) => {
+        if (res?.user) console.info("[session] redirect sign-in completed");
+      })
+      .catch((err) => console.error("[session] redirect sign-in failed", err));
 
     // Fail-safe: never let the app hang on "loading" if Firebase Auth is slow
     // or unreachable (the listener below depends on the network).

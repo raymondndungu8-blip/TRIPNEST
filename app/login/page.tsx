@@ -15,6 +15,7 @@ import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { auth } from "@/lib/firebase";
 import { signInWithEmail, resetPassword, signInWithGoogle } from "@/lib/auth";
+import { ensureClientProfile } from "@/lib/profiles";
 import { getDocument, docs } from "@/lib/db";
 import { friendlyErrorMessage } from "@/lib/utils";
 
@@ -23,7 +24,7 @@ const LOCKOUT_MS = 30_000;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, client, driver, loading } = useSession();
+  const { user, client, driver, loading, setClient } = useSession();
   const { toast } = useToast();
 
   const [email, setEmail] = useState("");
@@ -59,7 +60,7 @@ export default function LoginPage() {
     if (!loading && user) {
       if (client) router.replace("/client");
       else if (driver) router.replace("/driver");
-      else router.replace("/signup/client");
+      else router.replace("/client");
     }
   }, [loading, user, client, driver, router]);
 
@@ -83,17 +84,23 @@ export default function LoginPage() {
 
       const fbUser = auth.currentUser;
       if (fbUser) {
-        const c = await getDocument(docs.client(fbUser.uid));
-        if (c) {
+        const existing = await getDocument(docs.client(fbUser.uid));
+        if (existing) {
           router.replace("/client");
           return;
         }
-        const d = await getDocument(docs.driver(fbUser.uid));
-        if (d) {
+        const driverDoc = await getDocument(docs.driver(fbUser.uid));
+        if (driverDoc) {
           router.replace("/driver");
           return;
         }
-        router.replace("/signup/client");
+        // No profile on record (e.g. Google still finalising) — provision one
+        // and land the user straight on the dashboard instead of funneling
+        // them back through the signup form.
+        const profile = await ensureClientProfile(fbUser);
+        setClient(profile);
+        router.replace("/client");
+        return;
       }
     } catch (err) {
       const attempts = failedAttempts + 1;

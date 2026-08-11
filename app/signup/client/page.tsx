@@ -15,25 +15,13 @@ import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { auth } from "@/lib/firebase";
 import { signUpWithEmail, signInWithGoogle } from "@/lib/auth";
+import { ensureClientProfile } from "@/lib/profiles";
 import { getDocument, docs, setDocument } from "@/lib/db";
 import { friendlyErrorMessage } from "@/lib/utils";
 import { PasswordStrength } from "@/components/ui/password-strength";
 import type { Client } from "@/lib/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** Poll briefly for the client document to exist. */
-async function waitForClient(
-  userId: string,
-  attempts = 6
-): Promise<Client | null> {
-  for (let i = 0; i < attempts; i++) {
-    const data = await getDocument<Client>(docs.client(userId));
-    if (data) return data;
-    await new Promise((r) => setTimeout(r, 300));
-  }
-  return null;
-}
 
 export default function ClientSignupPage() {
   const router = useRouter();
@@ -58,17 +46,19 @@ export default function ClientSignupPage() {
   }, [loading, client, router]);
 
   // Have a session but the profile hasn't loaded into context yet (e.g. just
-  // came back from Google or a password reset). The DB trigger guarantees a
-  // row exists almost instantly — poll briefly, then go home automatically.
+  // came back from Google). Provision it on the spot and go straight to the
+  // dashboard — no need to repeat the signup form.
   useEffect(() => {
     if (loading || client || !user) return;
     let active = true;
     (async () => {
-      const found = await waitForClient(user.uid);
-      if (!active) return;
-      if (found) {
-        setClient(found);
+      try {
+        const profile = await ensureClientProfile(user);
+        if (!active) return;
+        setClient(profile);
         router.replace("/client");
+      } catch (err) {
+        console.error("[signup/client] profile provisioning failed", err);
       }
     })();
     return () => { active = false; };
