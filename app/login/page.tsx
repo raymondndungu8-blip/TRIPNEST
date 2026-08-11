@@ -13,7 +13,6 @@ import { FadeIn } from "@/components/motion/motion";
 import { FullPageSpinner } from "@/components/ui/spinner";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
-import { auth } from "@/lib/firebase";
 import { signInWithEmail, resetPassword, signInWithGoogle } from "@/lib/auth";
 import { ensureClientProfile } from "@/lib/profiles";
 import { getDocument, docs } from "@/lib/db";
@@ -78,30 +77,28 @@ export default function LoginPage() {
 
     setSubmitting(true);
     try {
-      await signInWithEmail(email, password);
+      // Use the user returned by the auth call, NOT auth.currentUser, which can
+      // briefly be null right after sign-in and cause us to skip navigation.
+      const fbUser = await signInWithEmail(email, password);
       setFailedAttempts(0);
       toast("Welcome back!", "success");
 
-      const fbUser = auth.currentUser;
-      if (fbUser) {
-        const existing = await getDocument(docs.client(fbUser.uid));
-        if (existing) {
-          router.replace("/client");
-          return;
-        }
-        const driverDoc = await getDocument(docs.driver(fbUser.uid));
-        if (driverDoc) {
-          router.replace("/driver");
-          return;
-        }
-        // No profile on record (e.g. Google still finalising) — provision one
-        // and land the user straight on the dashboard instead of funneling
-        // them back through the signup form.
-        const profile = await ensureClientProfile(fbUser);
-        setClient(profile);
+      const existing = await getDocument(docs.client(fbUser.uid));
+      if (existing) {
         router.replace("/client");
         return;
       }
+      const driverDoc = await getDocument(docs.driver(fbUser.uid));
+      if (driverDoc) {
+        router.replace("/driver");
+        return;
+      }
+      // No profile on record yet — provision one on the spot and land the
+      // user straight on the dashboard instead of funneling them back through
+      // the signup form.
+      const profile = await ensureClientProfile(fbUser);
+      setClient(profile);
+      router.replace("/client");
     } catch (err) {
       const attempts = failedAttempts + 1;
       setFailedAttempts(attempts);

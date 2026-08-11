@@ -9,6 +9,7 @@ import {
   updatePassword as fbUpdatePassword,
   signOut as fbSignOut,
   type ConfirmationResult,
+  type User,
 } from "firebase/auth"
 import { auth } from "./firebase"
 
@@ -33,15 +34,20 @@ export async function signInWithGoogle(): Promise<void> {
 export async function signUpWithEmail(
   email: string,
   password: string
-): Promise<void> {
-  await createUserWithEmailAndPassword(auth, email.trim(), password)
+): Promise<User> {
+  // Return the credential's user (NOT auth.currentUser, which can briefly be
+  // null right after the operation resolves) so callers can reliably get the
+  // uid and create the profile document.
+  const cred = await createUserWithEmailAndPassword(auth, email.trim(), password)
+  return cred.user
 }
 
 export async function signInWithEmail(
   email: string,
   password: string
-): Promise<void> {
-  await signInWithEmailAndPassword(auth, email.trim(), password)
+): Promise<User> {
+  const cred = await signInWithEmailAndPassword(auth, email.trim(), password)
+  return cred.user
 }
 
 export async function sendPhoneOtp(phone: string): Promise<void> {

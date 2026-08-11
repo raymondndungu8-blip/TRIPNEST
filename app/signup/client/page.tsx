@@ -13,12 +13,12 @@ import { FadeIn } from "@/components/motion/motion";
 import { FullPageSpinner } from "@/components/ui/spinner";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
-import { auth } from "@/lib/firebase";
 import { signUpWithEmail, signInWithGoogle } from "@/lib/auth";
 import { ensureClientProfile } from "@/lib/profiles";
 import { getDocument, docs, setDocument } from "@/lib/db";
 import { friendlyErrorMessage } from "@/lib/utils";
 import { PasswordStrength } from "@/components/ui/password-strength";
+import type { User as FirebaseUser } from "firebase/auth";
 import type { Client } from "@/lib/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -92,8 +92,12 @@ export default function ClientSignupPage() {
 
     setSubmitting(true);
     try {
+      let authUser: FirebaseUser;
       try {
-        await signUpWithEmail(email, password);
+        // Use the returned user (auth.currentUser can be briefly null right
+        // after creation, which used to wrongly bounce users to /login before
+        // their profile was ever written).
+        authUser = await signUpWithEmail(email, password);
       } catch (signupErr) {
         const msg = signupErr instanceof Error ? signupErr.message : "";
         if (/already registered/i.test(msg)) {
@@ -102,14 +106,6 @@ export default function ClientSignupPage() {
           return;
         }
         throw signupErr;
-      }
-
-      const authUser = auth.currentUser;
-
-      if (!authUser) {
-        toast("Check your email to confirm your account, then log in.", "info");
-        router.push("/login");
-        return;
       }
 
       // Create the client profile document. NOTE: this used to rely on a
@@ -136,7 +132,7 @@ export default function ClientSignupPage() {
 
       setClient(finalProfile);
       toast("Welcome to TripNest!", "success");
-      router.push("/client");
+      router.replace("/client");
     } catch (err) {
       toast(friendlyErrorMessage(err, "Something went wrong"), "error");
     } finally {
