@@ -516,7 +516,8 @@ function ClientDashboard() {
   const [mode, setMode] = useState<"now" | "schedule">("now");
   const [pickup, setPickup] = useState("");
   const [destination, setDestination] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
   const [selectedVehicle, setSelectedVehicle] =
     useState<VehicleCategory>("standard");
   const [rideType, setRideType] = useState<RideType>("private");
@@ -589,10 +590,14 @@ function ClientDashboard() {
   }));
 
   // Flat-rate prices only show once the client has entered a destination
-  // (plus a time, when scheduling a ride).
+  // (plus a date & time, when scheduling a ride).
   const hasDestination = !!destination.trim();
+  const scheduledAtValue =
+    scheduledDate && scheduledTime ? `${scheduledDate}T${scheduledTime}` : "";
   const showPrice =
-    mode === "now" ? hasDestination : hasDestination && !!scheduledAt;
+    mode === "now"
+      ? hasDestination
+      : hasDestination && !!scheduledAtValue;
 
   async function handleUseCurrentLocation() {
     setLocating(true);
@@ -618,12 +623,12 @@ function ClientDashboard() {
       toast("Enter your destination", "warning");
       return;
     }
-    if (mode === "schedule" && !scheduledAt) {
-      toast("Pick a date & time for your scheduled ride", "warning");
-      return;
-    }
-    if (mode === "schedule" && scheduledAt) {
-      const pickTime = new Date(scheduledAt).getTime();
+    if (mode === "schedule") {
+      if (!scheduledDate || !scheduledTime) {
+        toast("Pick a date & time for your scheduled ride", "warning");
+        return;
+      }
+      const pickTime = new Date(`${scheduledDate}T${scheduledTime}`).getTime();
       if (Number.isNaN(pickTime)) {
         toast("That date & time isn't valid", "warning");
         return;
@@ -649,8 +654,8 @@ function ClientDashboard() {
         pickup: trimmedPickup,
         destination: trimmedDestination,
         scheduledAt:
-          mode === "schedule" && scheduledAt
-            ? new Date(scheduledAt).toISOString()
+          mode === "schedule" && scheduledAtValue
+            ? new Date(scheduledAtValue).toISOString()
             : null,
         vehicleCategory: selectedVehicle,
         rideType: rideType,
@@ -683,7 +688,8 @@ function ClientDashboard() {
       ).catch(() => {});
 
       setDestination("");
-      setScheduledAt("");
+      setScheduledDate("");
+      setScheduledTime("");
     } catch (err) {
       toast(friendlyErrorMessage(err, "Could not book your ride. Try again."), "error");
     } finally {
@@ -779,6 +785,45 @@ function ClientDashboard() {
               className="input-transparent w-full bg-transparent text-[1.05rem] font-medium text-slate-200 placeholder:text-slate-500 focus:outline-none"
             />
           </div>
+
+          {/* Pickup date & time — sits right under Where To when scheduling */}
+          {mode === "schedule" && (
+            <FadeIn>
+              <div className="mt-4 border-t border-white/[0.06] pt-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <CalendarHeart className="h-4 w-4 text-accent" />
+                  <span className="text-sm font-semibold text-foreground">
+                    Pickup date & time
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={scheduledDate}
+                      min={new Date().toISOString().split("T")[0]}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-[15px] text-slate-200 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-accent/60"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      Time
+                    </label>
+                    <input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-[15px] text-slate-200 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-accent/60"
+                    />
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          )}
         </div>
       </div>
 
@@ -872,23 +917,6 @@ function ClientDashboard() {
         <NearbyDrivers client={client} category={selectedVehicle} />
       </div>
 
-      {/* Schedule date/time */}
-      {mode === "schedule" && (
-        <FadeIn>
-          <div className="card mb-5 p-4">
-            <label className="mb-1.5 block text-sm font-medium text-foreground">
-              Date & time
-            </label>
-            <input
-              type="datetime-local"
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-[15px] text-slate-900 [color-scheme:light] focus:outline-none focus:ring-2 focus:ring-ring/60"
-            />
-          </div>
-        </FadeIn>
-      )}
-
       {/* Choose a ride */}
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="font-display text-lg font-bold text-foreground">
@@ -902,8 +930,8 @@ function ClientDashboard() {
           </span>
         ) : (
           <span className="text-xs text-muted-foreground">
-            {mode === "schedule" && !scheduledAt
-              ? "Add time & destination for a fare"
+            {mode === "schedule" && !scheduledAtValue
+              ? "Add date, time & destination for a fare"
               : "Add destination for a fare"}
           </span>
         )}
@@ -951,8 +979,8 @@ function ClientDashboard() {
                     ? rideType === "cost_sharing"
                       ? `${passengers} ${passengers === 1 ? "person" : "people"} · per person`
                       : "flat rate"
-                    : mode === "schedule" && !scheduledAt
-                      ? "add time"
+                    : mode === "schedule" && !scheduledAtValue
+                      ? "add date & time"
                       : "add destination"}
                 </p>
               </div>
