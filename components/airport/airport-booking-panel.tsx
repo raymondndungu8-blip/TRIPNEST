@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { MapPin, Calendar, Wallet, X, Plane } from "lucide-react";
+import { MapPin, Calendar, X, Plane } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
+import { FlatPrice } from "@/components/ui/flat-price";
+import { flatRate } from "@/lib/pricing";
 import {
   VEHICLE_CATEGORIES,
   RIDE_TYPES,
@@ -48,7 +50,6 @@ export function AirportBookingPanel({
   const [scheduledAt, setScheduledAt] = useState(defaultPickupTime(flight?.departure));
   const [vehicleCategory, setVehicleCategory] = useState<VehicleCategory>("standard");
   const [rideType, setRideType] = useState<RideType>("private");
-  const [budget, setBudget] = useState("2500");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -85,11 +86,6 @@ export function AirportBookingPanel({
       setError("Enter a pickup location (max 200 characters)");
       return;
     }
-    const budgetNum = Number(budget);
-    if (!budget.trim() || Number.isNaN(budgetNum) || budgetNum <= 0 || budgetNum > 1_000_000) {
-      setError("Enter a valid transport budget (1 – 1,000,000)");
-      return;
-    }
     setError(null);
     setSubmitting(true);
     try {
@@ -98,7 +94,7 @@ export function AirportBookingPanel({
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
         vehicleCategory,
         rideType,
-        budget: budgetNum,
+        budget: flatRate(vehicleCategory, rideType),
       });
       if (ok) {
         setPickup("");
@@ -221,28 +217,7 @@ export function AirportBookingPanel({
                 />
               </Field>
 
-              <Field
-                label="Transport budget (KES)"
-                htmlFor="airport-budget"
-                required
-                error={error && pickup.trim() ? error : undefined}
-              >
-                <div className="relative">
-                  <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-accent" />
-                  <Input
-                    id="airport-budget"
-                    type="number"
-                    inputMode="decimal"
-                    min={1}
-                    max={1000000}
-                    value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
-                    placeholder="e.g. 2500"
-                    className="pl-10"
-                    invalid={!!error && !!pickup.trim()}
-                  />
-                </div>
-              </Field>
+              <FlatPrice category={vehicleCategory} rideType={rideType} />
 
               <Button type="submit" size="lg" fullWidth loading={submitting}>
                 {submitting ? "Requesting…" : "Request airport ride"}

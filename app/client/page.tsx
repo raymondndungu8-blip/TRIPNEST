@@ -28,7 +28,6 @@ import {
   UserCircle,
   MessageCircle,
   Star,
-  TrendingUp,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Avatar } from "@/components/ui/avatar";
@@ -51,7 +50,7 @@ import { createRide, cancelRide, sendRideCodeWhatsApp } from "@/lib/rides";
 import { addFavorite, removeFavorite } from "@/lib/favorites";
 import { notifyAvailableDrivers } from "@/lib/notify";
 import { getCurrentLocationLabel, geocode, getRoute, type LngLat } from "@/lib/geo";
-import { TIER_PRICING, computeFare, getSurgeMultiplier } from "@/lib/pricing";
+import { flatRate } from "@/lib/pricing";
 import { Spinner } from "@/components/ui/spinner";
 import { cn, formatKES, friendlyErrorMessage } from "@/lib/utils";
 import type {
@@ -521,7 +520,6 @@ function ClientDashboard() {
   const [selectedVehicle, setSelectedVehicle] =
     useState<VehicleCategory>("standard");
   const [rideType, setRideType] = useState<RideType>("private");
-  const [budget, setBudget] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -534,21 +532,10 @@ function ClientDashboard() {
     durationMin: number;
   } | null>(null);
   const [estimating, setEstimating] = useState(false);
-  const [surge, setSurge] = useState(1);
 
-  // Surge pricing: reflect current demand for the selected vehicle tier.
-  useEffect(() => {
-    let cancelled = false;
-    getSurgeMultiplier(selectedVehicle).then((m) => {
-      if (!cancelled) setSurge(m);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedVehicle]);
-
-  // Live fare estimate: geocode pickup + destination, get the road route,
-  // and derive distance/duration so per-tier fares are real, not hardcoded.
+  // Live distance/duration estimate: geocode pickup + destination, get the
+  // road route. (Prices are flat-rate and only appear once the destination —
+  // and time, for scheduled rides — has been entered.)
   useEffect(() => {
     const dest = destination.trim();
     if (!dest) {
@@ -597,12 +584,14 @@ function ClientDashboard() {
 
   const vehicles = VEHICLE_META.map((v) => ({
     ...v,
-    price: estimate
-      ? computeFare(v.category, estimate.distanceKm, estimate.durationMin, surge)
-      : TIER_PRICING[v.category].min,
+    price: flatRate(v.category, rideType),
   }));
 
-  const selected = vehicles.find((v) => v.category === selectedVehicle)!;
+  // Flat-rate prices only show once the client has entered a destination
+  // (plus a time, when scheduling a ride).
+  const hasDestination = !!destination.trim();
+  const showPrice =
+    mode === "now" ? hasDestination : hasDestination && !!scheduledAt;
 
   async function handleUseCurrentLocation() {
     setLocating(true);
@@ -628,15 +617,15 @@ function ClientDashboard() {
       toast("Enter your destination", "warning");
       return;
     }
+    if (mode === "schedule" && !scheduledAt) {
+      toast("Pick a date & time for your scheduled ride", "warning");
+      return;
+    }
     if (trimmedDestination.length > 200 || trimmedPickup.length > 200) {
       toast("Location names must be under 200 characters", "warning");
       return;
     }
-    const finalBudget = budget ? Number(budget) : selected.price;
-    if (!Number.isFinite(finalBudget) || finalBudget <= 0 || finalBudget > 1_000_000) {
-      toast("Enter a valid transport budget", "warning");
-      return;
-    }
+    const finalBudget = flatRate(selectedVehicle, rideType);
     setSubmitting(true);
     try {
       const ride = await createRide({
@@ -678,7 +667,6 @@ function ClientDashboard() {
 
       setDestination("");
       setScheduledAt("");
-      setBudget("");
     } catch (err) {
       toast(friendlyErrorMessage(err, "Could not book your ride. Try again."), "error");
     } finally {
@@ -805,31 +793,6 @@ function ClientDashboard() {
         </div>
       </div>
 
-      {/* Transport budget — only visible for cost sharing */}
-      {rideType === "cost_sharing" && (
-        <div className="mb-5">
-          <h4 className="mb-2 text-sm font-medium text-foreground">
-            Transport budget (KES)
-          </h4>
-          <div className="card flex items-center gap-3 overflow-hidden p-0 px-4">
-            <Wallet className="h-4 w-4 shrink-0 text-accent" />
-            <input
-              type="number"
-              inputMode="decimal"
-              min={1}
-              max={1000000}
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              placeholder={`e.g. ${selected.price.toLocaleString()}`}
-              className="input-transparent w-full bg-transparent py-3.5 text-[15px] focus:outline-none"
-            />
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Enter your share of the ride cost
-          </p>
-        </div>
-      )}
-
       {/* Live driver map */}
       <div className="mb-3 flex items-center justify-between">
         <h4 className="text-xl font-bold text-foreground">Drivers near you</h4>
@@ -879,25 +842,12 @@ function ClientDashboard() {
           </span>
         ) : (
           <span className="text-xs text-muted-foreground">
-            Add destination for a fare
+            {mode === "schedule" && !scheduledAt
+              ? "Add time & destination for a fare"
+              : "Add destination for a fare"}
           </span>
         )}
       </div>
-      {surge > 1 && estimate && (
-        <div className="mb-4 flex items-center gap-2.5 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-warning/20">
-            <TrendingUp className="h-4 w-4 text-warning" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground">
-              Demand is high — {surge.toFixed(1)}× surge
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Fares are up as more riders than drivers are currently online.
-            </p>
-          </div>
-        </div>
-      )}
       <div className="mb-6 space-y-3">
         {vehicles.map((v) => {
           const active = selectedVehicle === v.category;
@@ -934,10 +884,16 @@ function ClientDashboard() {
               </div>
               <div className="text-right">
                 <p className="font-display font-bold text-foreground">
-                  {formatKES(v.price)}
+                  {showPrice ? formatKES(v.price) : "—"}
                 </p>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {estimate ? "estimated" : "from"}
+                  {showPrice
+                    ? rideType === "cost_sharing"
+                      ? "cost sharing"
+                      : "flat rate"
+                    : mode === "schedule" && !scheduledAt
+                      ? "add time"
+                      : "add destination"}
                 </p>
               </div>
             </button>

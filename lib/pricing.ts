@@ -1,4 +1,4 @@
-import type { VehicleCategory } from "./types";
+import type { RideType, VehicleCategory } from "./types";
 import { collections, queryDocuments, where } from "./db";
 
 /** A geographic point in {lat, lng} form. */
@@ -17,6 +17,30 @@ export interface TierRate {
   perMin: number;
   /** Minimum fare — the raw fare is never allowed below this. */
   min: number;
+}
+
+/**
+ * Flat-rate fare table (KES) — the price the client is quoted for a ride,
+ * regardless of distance. Private is a solo ride; cost sharing splits the
+ * trip between riders, so it is priced lower.
+ */
+export const FLAT_RIDE_RATES: Record<
+  RideType,
+  Record<VehicleCategory, number>
+> = {
+  private: { standard: 1500, xl: 2500, premium: 4000 },
+  cost_sharing: { standard: 900, xl: 1500, premium: 2400 },
+};
+
+/**
+ * The flat rate for a ride given the vehicle tier and ride type. Used to quote
+ * an upfront price (events, airport) instead of asking the client for a budget.
+ */
+export function flatRate(
+  category: VehicleCategory,
+  rideType: RideType
+): number {
+  return FLAT_RIDE_RATES[rideType]?.[category] ?? FLAT_RIDE_RATES.private[category];
 }
 
 /**

@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { MapPin, Calendar, Wallet, X, Navigation } from "lucide-react";
+import { MapPin, Calendar, X, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
+import { FlatPrice } from "@/components/ui/flat-price";
+import { flatRate } from "@/lib/pricing";
 import {
   VEHICLE_CATEGORIES,
   RIDE_TYPES,
@@ -52,7 +54,6 @@ export function EventBookingPanel({
   const [vehicleCategory, setVehicleCategory] =
     useState<VehicleCategory>("standard");
   const [rideType, setRideType] = useState<RideType>(initialRideType);
-  const [budget, setBudget] = useState(String(event.estimated_budget ?? ""));
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -65,13 +66,12 @@ export function EventBookingPanel({
     if (open) {
       setRideType(initialRideType);
       setScheduledAt(eventDefaultDateTime(event.event_date));
-      setBudget(String(event.estimated_budget ?? ""));
       setError(null);
       // Move focus into the panel for accessibility.
       const t = setTimeout(() => closeRef.current?.focus(), 50);
       return () => clearTimeout(t);
     }
-  }, [open, initialRideType, event.event_date, event.estimated_budget]);
+  }, [open, initialRideType, event.event_date]);
 
   // Escape to close + lock background scroll while open.
   useEffect(() => {
@@ -94,11 +94,6 @@ export function EventBookingPanel({
       setError("Enter a pickup location (max 200 characters)");
       return;
     }
-    const budgetNum = Number(budget);
-    if (!budget.trim() || Number.isNaN(budgetNum) || budgetNum <= 0 || budgetNum > 1_000_000) {
-      setError("Enter a valid transport budget (1 – 1,000,000)");
-      return;
-    }
     setError(null);
     setSubmitting(true);
     try {
@@ -107,7 +102,7 @@ export function EventBookingPanel({
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
         vehicleCategory,
         rideType,
-        budget: budgetNum,
+        budget: flatRate(vehicleCategory, rideType),
       });
       if (ok) {
         setPickup("");
@@ -237,33 +232,7 @@ export function EventBookingPanel({
                 />
               </Field>
 
-              <Field
-                label="Transport budget (KES)"
-                htmlFor={`budget-${event.id}`}
-                required
-                error={error && pickup.trim() ? error : undefined}
-                hint={
-                  rideType === "cost_sharing"
-                    ? "Cost sharing splits the fare — you'll usually pay less."
-                    : undefined
-                }
-              >
-                <div className="relative">
-                  <Wallet className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-accent" />
-                  <Input
-                    id={`budget-${event.id}`}
-                    type="number"
-                    inputMode="decimal"
-                    min={1}
-                    max={1000000}
-                    value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
-                    placeholder="e.g. 1500"
-                    className="pl-10"
-                    invalid={!!error && !!pickup.trim()}
-                  />
-                </div>
-              </Field>
+              <FlatPrice category={vehicleCategory} rideType={rideType} />
 
               <Button type="submit" size="lg" fullWidth loading={submitting}>
                 {submitting ? "Requesting…" : `Request ride to ${event.name}`}
