@@ -43,6 +43,29 @@ export function flatRate(
   return FLAT_RIDE_RATES[rideType]?.[category] ?? FLAT_RIDE_RATES.private[category];
 }
 
+/** Max passengers a vehicle category can carry. */
+export const VEHICLE_SEATS: Record<VehicleCategory, number> = {
+  standard: 4,
+  xl: 6,
+  premium: 8,
+};
+
+/**
+ * How much EACH rider pays on a cost-sharing ride. The total fare stays the
+ * same (the driver receives `flatRate`); it is simply split evenly across the
+ * group. Private rides are always charged as a single person.
+ */
+export function perPersonFare(
+  category: VehicleCategory,
+  rideType: RideType,
+  passengers: number
+): number {
+  const total = flatRate(category, rideType);
+  if (rideType !== "cost_sharing") return total;
+  const n = Math.max(1, Math.min(passengers, VEHICLE_SEATS[category]));
+  return Math.ceil(total / n / 10) * 10;
+}
+
 /**
  * Fare model per vehicle tier (KES).
  * Based on Nov-2025 mandated Uber/Bolt Kenya rate research.

@@ -70,7 +70,13 @@ export interface Ride {
   created_at: string;
   pickup_lat: number | null;
   pickup_lng: number | null;
+  /** Number of people sharing the vehicle. Defaults to 1 (private). */
+  passengers: number;
 }
+
+/** How many people share the vehicle on a ride. For cost sharing the fare is
+ * divided per person; private rides always carry 1. */
+export type PassengerCount = 1 | 2 | 3 | 4 | 5 | 6;
 
 export type PaymentStatus = "unpaid" | "pending" | "paid" | "failed";
 

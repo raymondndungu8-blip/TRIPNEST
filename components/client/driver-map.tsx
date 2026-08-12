@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapPin, CarFront, Radar, KeyRound } from "lucide-react";
-import { loadGoogleMaps, svgIcon } from "@/lib/google-maps";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { MapPin, CarFront, Radar } from "lucide-react";
 import { useNearbyDrivers } from "@/hooks/use-rides";
 import { geocode, haversineKm, type LngLat } from "@/lib/geo";
 import { isPositionFresh } from "@/lib/location";
+import { MAP_STYLE, markerEl, boundsOf } from "@/lib/map";
 import { cn } from "@/lib/utils";
 import type { Client, Driver, VehicleCategory } from "@/lib/types";
 
@@ -50,24 +52,22 @@ async function geocodeDriver(driver: Driver): Promise<LngLat | null> {
 function driverSvg(online: boolean, distanceKm: number) {
   const body = online ? "#22c55e" : "#64748b";
   const ring = online ? "rgba(34,197,94,0.35)" : "rgba(100,116,139,0.3)";
-  return svgIcon(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
       <circle cx="23" cy="23" r="21" fill="${body}" stroke="#ffffff" stroke-width="2"/>
       <circle cx="23" cy="23" r="25" fill="none" stroke="${ring}" stroke-width="4"/>
       <path d="M17 28h12l-1-5H18l-1 5zM18.5 22l1-2.6h7l1 2.6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <circle cx="19" cy="28" r="1.8" fill="#fff"/><circle cx="27" cy="28" r="1.8" fill="#fff"/>
       <text x="23" y="40" text-anchor="middle" font-size="7.5" font-weight="700" fill="#fff" font-family="system-ui">${distanceKm.toFixed(1)}km</text>
-    </svg>`
-  );
+    </svg>`;
+  return "data:image/svg+xml," + encodeURIComponent(svg);
 }
 
 function clientSvg() {
-  return svgIcon(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
       <circle cx="15" cy="15" r="14" fill="#38bdf8" fill-opacity="0.28"/>
       <circle cx="15" cy="15" r="6" fill="#38bdf8" stroke="#ffffff" stroke-width="2"/>
-    </svg>`
-  );
+    </svg>`;
+  return "data:image/svg+xml," + encodeURIComponent(svg);
 }
 
 interface Point {
@@ -89,14 +89,14 @@ export function DriverMap({
 }) {
   const { drivers } = useNearbyDrivers(client.id, category);
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<Gmaps>(null);
-  const markersRef = useRef<Gmaps[]>([]);
-  const infoRef = useRef<Gmaps | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markersRef = useRef<maplibregl.Marker[]>([]);
+  const popupRef = useRef<maplibregl.Popup | null>(null);
 
   const [center, setCenter] = useState<LngLat | null>(null);
   const [points, setPoints] = useState<Point[]>([]);
   const [ready, setReady] = useState(false);
-  const [failed, setFailed] = useState("");
+  const [failed, setFailed] = useState(false);
 
   // Resolve the client's map centre from their pickup (coords or free text).
   useEffect(() => {
@@ -115,44 +115,29 @@ export function DriverMap({
   // Initialise the map once.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      let maps: Gmaps;
-      try {
-        maps = await loadGoogleMaps();
-      } catch (err) {
-        if (!cancelled)
-          setFailed(
-            (err as Error).message === "MISSING_GOOGLE_MAPS_KEY"
-              ? "no-key"
-              : "load"
-          );
-        return;
-      }
-      if (cancelled || !containerRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-      const config = (await import("@/lib/google-maps")).getGoogleMapsConfig();
-      const map = new maps.Map(containerRef.current, {
-        center: { lat: NAIROBI[1], lng: NAIROBI[0] },
-        zoom: 11,
-        tilt: 55,
-        heading: 0,
-        mapId: config.mapId || undefined,
-        mapTypeControl: false,
-        fullscreenControl: false,
-        streetViewControl: false,
-        zoomControl: true,
-        clickableIcons: false,
-        backgroundColor: "#050912",
-      } as any);
-      mapRef.current = map;
-      infoRef.current = new maps.InfoWindow();
-      setReady(true);
-    })();
+    const map = new maplibregl.Map({
+      container,
+      style: MAP_STYLE as never,
+      center: { lng: NAIROBI[0], lat: NAIROBI[1] },
+      zoom: 11,
+      attributionControl: { compact: true },
+    });
+    mapRef.current = map;
+
+    map.once("load", () => {
+      if (!cancelled) setReady(true);
+    });
+
     return () => {
       cancelled = true;
-      infoRef.current?.close?.();
-      infoRef.current = null;
-      mapRef.current?.setMap?.(null);
+      popupRef.current?.remove();
+      popupRef.current = null;
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
+      mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
@@ -181,54 +166,38 @@ export function DriverMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !center) return;
-    let cancelled = false;
 
-    (async () => {
-      let maps: Gmaps;
-      try {
-        maps = await loadGoogleMaps();
-      } catch {
-        return;
-      }
-      if (cancelled) return;
+    // Clear old markers + any open popup.
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+    popupRef.current?.remove();
+    popupRef.current = null;
 
-      // Clear old markers + any open info window.
-      markersRef.current.forEach((m) => m.setMap?.(null));
-      markersRef.current = [];
-      infoRef.current?.close?.();
+    new maplibregl.Marker({ element: markerEl(clientSvg(), 30) })
+      .setLngLat({ lng: center[0], lat: center[1] })
+      .addTo(map)
+      .getElement();
 
-      const clientMarker = new maps.Marker({
-        map,
-        position: { lat: center[1], lng: center[0] },
-        icon: {
-          url: clientSvg(),
-          scaledSize: new maps.Size(30, 30),
-          anchor: new maps.Point(15, 15),
-        },
-        zIndex: 2000,
-      });
-      markersRef.current.push(clientMarker);
-
-      for (const p of points) {
-        const marker = new maps.Marker({
-          map,
-          position: { lat: p.coord[1], lng: p.coord[0] },
-          icon: {
-            url: driverSvg(p.driver.is_available, p.distanceKm),
-            scaledSize: new maps.Size(46, 46),
-            anchor: new maps.Point(23, 23),
-          },
-          zIndex: 1000 + (p.driver.is_available ? 10 : 0),
-          title: p.driver.name,
-        });
-        marker.addListener("click", () => {
-          const status = p.driver.is_available ? "Online now" : "Offline";
-          const color = p.driver.is_available ? "#16a34a" : "#64748b";
-          const safe = (s: string) =>
-            s.replace(/[&<>"]/g, (c) =>
-              ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string
-            );
-          infoRef.current?.setContent(
+    for (const p of points) {
+      const el = markerEl(driverSvg(p.driver.is_available, p.distanceKm), 46);
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat({ lng: p.coord[0], lat: p.coord[1] })
+        .addTo(map);
+      el.style.cursor = "pointer";
+      el.addEventListener("click", () => {
+        const status = p.driver.is_available ? "Online now" : "Offline";
+        const color = p.driver.is_available ? "#16a34a" : "#64748b";
+        const safe = (s: string) =>
+          s.replace(/[&<>"]/g, (c) =>
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string
+          );
+        popupRef.current?.remove();
+        popupRef.current = new maplibregl.Popup({
+          offset: 26,
+          closeButton: false,
+        })
+          .setLngLat({ lng: p.coord[0], lat: p.coord[1] })
+          .setHTML(
             `<div style="font-family:system-ui,sans-serif;min-width:150px;line-height:1.35;color:#0f172a">
               <div style="font-weight:800;font-size:13px">${safe(p.driver.name)}</div>
               <div style="font-size:12px;color:#475569">${safe(
@@ -238,33 +207,31 @@ export function DriverMap({
                 ● ${status} · ${p.distanceKm.toFixed(1)} km away
               </div>
             </div>`
-          );
-          infoRef.current?.open({ map, anchor: marker });
-        });
-        markersRef.current.push(marker);
-      }
+          )
+          .addTo(map);
+      });
+      markersRef.current.push(marker);
+    }
 
-      const near = points.filter(
-        (p) => p.driver.is_available && p.distanceKm <= RADIUS_KM
-      );
-      const frame: LngLat[] = [center, ...near.map((p) => p.coord)];
-      if (frame.length > 1) {
-        const bounds = new maps.LatLngBounds();
-        frame.forEach((c) => bounds.extend({ lat: c[1], lng: c[0] }));
-        map.fitBounds(bounds, { padding: 64, maxZoom: 13 });
-      } else {
-        map.setCenter({ lat: center[1], lng: center[0] });
-        map.setZoom(12);
+    const near = points.filter(
+      (p) => p.driver.is_available && p.distanceKm <= RADIUS_KM
+    );
+    const frame: LngLat[] = [center, ...near.map((p) => p.coord)];
+    if (frame.length > 1) {
+      const bbox = boundsOf(frame);
+      if (bbox) {
+        map.fitBounds(
+          [
+            [bbox.lng[0], bbox.lat[0]],
+            [bbox.lng[1], bbox.lat[1]],
+          ],
+          { padding: 64, maxZoom: 13 }
+        );
+        return;
       }
-      if (map.getZoom() >= 12) {
-        map.setTilt(55);
-        map.setHeading(-18);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    }
+    map.setCenter({ lng: center[0], lat: center[1] });
+    map.setZoom(12);
   }, [points, ready, center]);
 
   const stats = useMemo(() => {
@@ -335,22 +302,7 @@ export function DriverMap({
         </div>
       )}
 
-      {failed === "no-key" && (
-        <div className="absolute inset-0 z-0 grid place-items-center bg-[#050912] px-6 text-center">
-          <div className="space-y-2">
-            <KeyRound className="mx-auto h-5 w-5 text-warning" />
-            <p className="text-sm font-semibold text-foreground">
-              Google Maps needs an API key
-            </p>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Set <code className="text-accent">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> to
-              see live drivers.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {failed === "load" && (
+      {failed && (
         <div className="absolute inset-0 z-0 grid place-items-center bg-[#050912] px-6 text-center">
           <p className="text-xs text-muted-foreground">Map unavailable</p>
         </div>

@@ -50,7 +50,7 @@ import { createRide, cancelRide, sendRideCodeWhatsApp } from "@/lib/rides";
 import { addFavorite, removeFavorite } from "@/lib/favorites";
 import { notifyAvailableDrivers } from "@/lib/notify";
 import { getCurrentLocationLabel, geocode, getRoute, type LngLat } from "@/lib/geo";
-import { flatRate } from "@/lib/pricing";
+import { flatRate, perPersonFare, VEHICLE_SEATS } from "@/lib/pricing";
 import { Spinner } from "@/components/ui/spinner";
 import { cn, formatKES, friendlyErrorMessage } from "@/lib/utils";
 import type {
@@ -520,6 +520,7 @@ function ClientDashboard() {
   const [selectedVehicle, setSelectedVehicle] =
     useState<VehicleCategory>("standard");
   const [rideType, setRideType] = useState<RideType>("private");
+  const [passengers, setPassengers] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -584,7 +585,7 @@ function ClientDashboard() {
 
   const vehicles = VEHICLE_META.map((v) => ({
     ...v,
-    price: flatRate(v.category, rideType),
+    price: perPersonFare(v.category, rideType, passengers),
   }));
 
   // Flat-rate prices only show once the client has entered a destination
@@ -621,6 +622,21 @@ function ClientDashboard() {
       toast("Pick a date & time for your scheduled ride", "warning");
       return;
     }
+    if (mode === "schedule" && scheduledAt) {
+      const pickTime = new Date(scheduledAt).getTime();
+      if (Number.isNaN(pickTime)) {
+        toast("That date & time isn't valid", "warning");
+        return;
+      }
+      if (pickTime <= Date.now()) {
+        toast("Scheduled time must be in the future", "warning");
+        return;
+      }
+    }
+    if (rideType === "cost_sharing" && passengers > VEHICLE_SEATS[selectedVehicle]) {
+      toast(`This vehicle only fits ${VEHICLE_SEATS[selectedVehicle]} people`, "warning");
+      return;
+    }
     if (trimmedDestination.length > 200 || trimmedPickup.length > 200) {
       toast("Location names must be under 200 characters", "warning");
       return;
@@ -639,6 +655,7 @@ function ClientDashboard() {
         vehicleCategory: selectedVehicle,
         rideType: rideType,
         budget: finalBudget,
+        passengers: rideType === "cost_sharing" ? passengers : 1,
         eventId: null,
         pickupLat: pickupCoords?.lat ?? null,
         pickupLng: pickupCoords?.lng ?? null,
@@ -777,7 +794,10 @@ function ClientDashboard() {
             return (
               <button
                 key={opt.value}
-                onClick={() => setRideType(opt.value)}
+                onClick={() => {
+                  setRideType(opt.value);
+                  if (opt.value === "private") setPassengers(1);
+                }}
                 className={cn(
                   "flex min-h-[4.45rem] items-center justify-center gap-2 rounded-[1.45rem] border text-base font-bold transition-all",
                   active
@@ -792,6 +812,46 @@ function ClientDashboard() {
           })}
         </div>
       </div>
+
+      {/* How many people are sharing — cost sharing only */}
+      {rideType === "cost_sharing" && (
+        <FadeIn>
+          <div className="mb-7 rounded-[1.55rem] border border-cyan-400/10 bg-[#10182a]/92 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h4 className="text-base font-bold text-foreground">
+                How many of you?
+              </h4>
+              <span className="text-xs text-muted-foreground">
+                Fare split {passengers} ways
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: VEHICLE_SEATS[selectedVehicle] }, (_, i) => i + 1).map(
+                (n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setPassengers(n)}
+                    className={cn(
+                      "grid h-11 min-w-[3.25rem] place-items-center rounded-xl border text-base font-bold transition-all",
+                      passengers === n
+                        ? "border-accent bg-accent/[0.12] text-accent shadow-[0_0_14px_rgba(0,212,255,0.14)]"
+                        : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-foreground"
+                    )}
+                  >
+                    {n}
+                  </button>
+                )
+              )}
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              <Users2 className="mr-1 inline h-3.5 w-3.5 text-accent" />
+              {passengers} {passengers === 1 ? "person" : "people"} splitting the ride —
+              the driver is paid the full fare, each person pays their share.
+            </p>
+          </div>
+        </FadeIn>
+      )}
 
       {/* Live driver map */}
       <div className="mb-3 flex items-center justify-between">
@@ -889,7 +949,7 @@ function ClientDashboard() {
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   {showPrice
                     ? rideType === "cost_sharing"
-                      ? "cost sharing"
+                      ? `${passengers} ${passengers === 1 ? "person" : "people"} · per person`
                       : "flat rate"
                     : mode === "schedule" && !scheduledAt
                       ? "add time"

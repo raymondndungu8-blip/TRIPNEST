@@ -24,6 +24,7 @@ export interface CreateRideInput {
   vehicleCategory: VehicleCategory
   rideType: RideType
   budget: number
+  passengers?: number
   eventId?: string | null
   pickupLat?: number | null
   pickupLng?: number | null
@@ -49,6 +50,7 @@ function toRide(data: Record<string, unknown>): Ride {
     created_at: data.createdAt as string,
     pickup_lat: (data.pickupLat as number) ?? null,
     pickup_lng: (data.pickupLng as number) ?? null,
+    passengers: (data.passengers as number) ?? 1,
   }
 }
 
