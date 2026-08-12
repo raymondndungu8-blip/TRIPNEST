@@ -33,6 +33,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Avatar } from "@/components/ui/avatar";
 import { SectionTitle } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
+import MotionButton from "@/components/ui/motion-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RideCard } from "@/components/ride/ride-card";
@@ -990,9 +991,12 @@ function ClientDashboard() {
       </div>
 
       {/* Confirm button */}
-      <Button size="lg" fullWidth loading={submitting} onClick={handleConfirm}>
-        {submitting ? "Booking…" : "Confirm Booking"}
-      </Button>
+      <MotionButton
+        label="Confirm Booking"
+        loadingLabel="Booking…"
+        loading={submitting}
+        onClick={handleConfirm}
+      />
 
       {/* Active ride tracker — only shows rides in progress */}
       <ActiveRidesSection client={client} />
