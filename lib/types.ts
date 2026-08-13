@@ -26,7 +26,13 @@ export interface Driver {
   id: string;
   name: string;
   phone: string;
+  /** Driver's profile photo. */
+  avatar_url: string | null;
   vehicle_type: string;
+  /** How many passengers the vehicle can carry. */
+  seats: number;
+  /** Photo of the vehicle itself. */
+  vehicle_image_url: string | null;
   plate_number: string;
   current_location: string | null;
   frequent_location: string | null;
@@ -34,7 +40,13 @@ export interface Driver {
   is_available: boolean;
   rating_avg: number | null;
   rating_count: number;
-  /** Live GPS position while online (lng, lat order to match map use). */
+/** Scanned driving licence (front / back). */
+  license_front_url: string | null;
+  license_back_url: string | null;
+  /** Scanned National ID. */
+  national_id_url: string | null;
+  /** True once the required licence / ID scans have been uploaded. */
+  documents_submitted: boolean;
   lng: number | null;
   lat: number | null;
   last_ping_at: string | null;

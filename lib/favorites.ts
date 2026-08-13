@@ -1,29 +1,10 @@
 import { docs, collections, queryDocuments, getDocument, setDocument, removeDocument } from "./db"
 import { where } from "firebase/firestore"
+import { toDriver } from "./rides"
 import type { Driver, VehicleCategory } from "./types"
 
 function favKey(clientId: string, driverId: string): string {
   return `${clientId}_${driverId}`
-}
-
-function toDriver(data: Record<string, unknown>): Driver {
-  return {
-    id: data.id as string,
-    name: data.name as string,
-    phone: data.phone as string,
-    vehicle_type: data.vehicleType as string,
-    plate_number: data.plateNumber as string,
-    current_location: (data.currentLocation as string) ?? null,
-    frequent_location: (data.frequentLocation as string) ?? null,
-    vehicle_category: data.vehicleCategory as VehicleCategory,
-    is_available: data.isAvailable as boolean,
-    rating_avg: (data.ratingAvg as number) ?? null,
-    rating_count: (data.ratingCount as number) ?? 0,
-    lng: (data.lng as number) ?? null,
-    lat: (data.lat as number) ?? null,
-    last_ping_at: (data.lastPingAt as string) ?? null,
-    created_at: data.createdAt as string,
-  }
 }
 
 export async function addFavorite(

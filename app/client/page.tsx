@@ -699,7 +699,7 @@ function ClientDashboard() {
   }
 
   return (
-    <AppShell className="max-w-md bg-[#060a13] px-4 pt-8">
+    <AppShell className="max-w-md bg-[#060a13] px-3 pt-3">
       <MenuDrawer
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -707,31 +707,31 @@ function ClientDashboard() {
       />
 
       {/* Top bar */}
-      <div className="mb-7 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
-          className="grid h-10 w-10 place-items-center rounded-xl text-slate-400 transition-colors hover:bg-white/5 hover:text-foreground"
+          className="grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition-colors hover:bg-white/5 hover:text-foreground"
           aria-label="Menu"
           aria-haspopup="dialog"
           aria-expanded={menuOpen}
         >
-          <Menu className="h-6 w-6" />
+          <Menu className="h-5 w-5" />
         </button>
-        <span className="font-display text-[1.35rem] font-bold uppercase tracking-[0.26em] text-white">
+        <span className="font-display text-lg font-bold uppercase tracking-[0.26em] text-white">
           TRIPNEST
         </span>
-        <Avatar name={client.name} size={42} className="shadow-[0_0_28px_rgba(0,212,255,0.45)]" />
+        <Avatar name={client.name} size={36} className="shadow-[0_0_28px_rgba(0,212,255,0.45)]" />
       </div>
 
       {/* Ride Now / Schedule tabs */}
-      <div className="mb-5 grid grid-cols-2 gap-3">
+      <div className="mb-3 grid grid-cols-2 gap-2">
         {(["now", "schedule"] as const).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
             className={cn(
-              "h-[4.1rem] rounded-[1.85rem] text-lg font-bold transition-all",
+              "h-12 rounded-2xl text-[15px] font-bold transition-all",
               mode === m
                 ? "bg-accent text-[#06101c] shadow-[0_0_26px_rgba(0,212,255,0.28)]"
                 : "bg-[#111a2b] text-slate-500 hover:text-foreground"
@@ -743,11 +743,11 @@ function ClientDashboard() {
       </div>
 
       {/* Location fields */}
-      <div className="mb-6 overflow-hidden rounded-[1.55rem] border border-cyan-400/10 bg-[#10182a]/92 shadow-[0_18px_55px_rgba(0,0,0,0.34)]">
-        <div className="p-5">
-          <div className="flex items-center gap-3 border-b border-white/[0.06] pb-4">
+      <div className="mb-3 overflow-hidden rounded-2xl border border-cyan-400/10 bg-[#10182a]/92 shadow-[0_18px_55px_rgba(0,0,0,0.34)]">
+        <div className="p-3">
+          <div className="flex items-center gap-2.5 border-b border-white/[0.06] pb-3">
             <span className="grid h-8 w-8 shrink-0 place-items-center">
-              <span className="h-3 w-3 rounded-full border-2 border-muted-foreground" />
+              <span className="h-2.5 w-2.5 rounded-full border-2 border-muted-foreground" />
             </span>
             <input
               value={pickup}
@@ -757,7 +757,7 @@ function ClientDashboard() {
               }}
               placeholder="Current Location"
               maxLength={200}
-              className="input-transparent w-full bg-transparent text-[1.05rem] font-medium text-slate-200 placeholder:text-slate-500 focus:outline-none"
+              className="input-transparent w-full bg-transparent text-[0.95rem] font-medium text-slate-200 placeholder:text-slate-500 focus:outline-none"
             />
             <button
               type="button"
@@ -765,41 +765,41 @@ function ClientDashboard() {
               disabled={locating}
               aria-label="Use my current location"
               title="Use my current location"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
             >
               {locating ? (
-                <Spinner className="h-4 w-4" />
+                <Spinner className="h-3.5 w-3.5" />
               ) : (
-                <LocateFixed className="h-4 w-4" />
+                <LocateFixed className="h-3.5 w-3.5" />
               )}
             </button>
           </div>
-          <div className="flex items-center gap-3 pt-4">
+          <div className="flex items-center gap-2.5 pt-3">
             <span className="grid h-8 w-8 shrink-0 place-items-center">
-              <Navigation className="h-4 w-4 text-accent" />
+              <Navigation className="h-3.5 w-3.5 text-accent" />
             </span>
             <input
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
               placeholder="Where to?"
               maxLength={200}
-              className="input-transparent w-full bg-transparent text-[1.05rem] font-medium text-slate-200 placeholder:text-slate-500 focus:outline-none"
+              className="input-transparent w-full bg-transparent text-[0.95rem] font-medium text-slate-200 placeholder:text-slate-500 focus:outline-none"
             />
           </div>
 
           {/* Pickup date & time — sits right under Where To when scheduling */}
           {mode === "schedule" && (
             <FadeIn>
-              <div className="mt-4 border-t border-white/[0.06] pt-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <CalendarHeart className="h-4 w-4 text-accent" />
+              <div className="mt-3 border-t border-white/[0.06] pt-3">
+                <div className="mb-2.5 flex items-center gap-2">
+                  <CalendarHeart className="h-3.5 w-3.5 text-accent" />
                   <span className="text-sm font-semibold text-foreground">
                     Pickup date & time
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
                       Date
                     </label>
                     <input
@@ -807,18 +807,18 @@ function ClientDashboard() {
                       value={scheduledDate}
                       min={new Date().toISOString().split("T")[0]}
                       onChange={(e) => setScheduledDate(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-[15px] text-slate-200 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-accent/60"
+                      className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2.5 text-sm text-slate-200 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-accent/60"
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
                       Time
                     </label>
                     <input
                       type="time"
                       value={scheduledTime}
                       onChange={(e) => setScheduledTime(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-[15px] text-slate-200 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-accent/60"
+                      className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2.5 text-sm text-slate-200 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-accent/60"
                     />
                   </div>
                 </div>
@@ -829,9 +829,9 @@ function ClientDashboard() {
       </div>
 
       {/* Ride type */}
-      <div className="mb-7">
-        <h4 className="mb-3 text-base font-bold text-foreground">Ride type</h4>
-        <div className="grid grid-cols-2 gap-3">
+      <div className="mb-3">
+        <h4 className="mb-2 text-sm font-bold text-foreground">Ride type</h4>
+        <div className="grid grid-cols-2 gap-2">
           {([
             { value: "private" as RideType, label: "Private", icon: Car },
             { value: "cost_sharing" as RideType, label: "Cost sharing", icon: Users2 },
@@ -845,7 +845,7 @@ function ClientDashboard() {
                   if (opt.value === "private") setPassengers(1);
                 }}
                 className={cn(
-                  "flex min-h-[4.45rem] items-center justify-center gap-2 rounded-[1.45rem] border text-base font-bold transition-all",
+                  "flex min-h-[3.4rem] items-center justify-center gap-2 rounded-2xl border text-sm font-bold transition-all",
                   active
                     ? "border-accent bg-accent/[0.08] text-accent shadow-[0_0_18px_rgba(0,212,255,0.12)]"
                     : "border-cyan-400/10 bg-transparent text-slate-500 hover:text-foreground"
@@ -862,16 +862,16 @@ function ClientDashboard() {
       {/* How many people are sharing — cost sharing only */}
       {rideType === "cost_sharing" && (
         <FadeIn>
-          <div className="mb-7 rounded-[1.55rem] border border-cyan-400/10 bg-[#10182a]/92 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h4 className="text-base font-bold text-foreground">
+          <div className="mb-3 rounded-2xl border border-cyan-400/10 bg-[#10182a]/92 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-sm font-bold text-foreground">
                 How many of you?
               </h4>
               <span className="text-xs text-muted-foreground">
                 Fare split {passengers} ways
               </span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {Array.from({ length: VEHICLE_SEATS[selectedVehicle] }, (_, i) => i + 1).map(
                 (n) => (
                   <button
@@ -879,7 +879,7 @@ function ClientDashboard() {
                     type="button"
                     onClick={() => setPassengers(n)}
                     className={cn(
-                      "grid h-11 min-w-[3.25rem] place-items-center rounded-xl border text-base font-bold transition-all",
+                      "grid h-9 min-w-[2.75rem] place-items-center rounded-xl border text-sm font-bold transition-all",
                       passengers === n
                         ? "border-accent bg-accent/[0.12] text-accent shadow-[0_0_14px_rgba(0,212,255,0.14)]"
                         : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-foreground"
@@ -890,7 +890,7 @@ function ClientDashboard() {
                 )
               )}
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">
               <Users2 className="mr-1 inline h-3.5 w-3.5 text-accent" />
               {passengers} {passengers === 1 ? "person" : "people"} splitting the ride —
               the driver is paid the full fare, each person pays their share.
@@ -900,11 +900,11 @@ function ClientDashboard() {
       )}
 
       {/* Live driver map */}
-      <div className="mb-3 flex items-center justify-between">
-        <h4 className="text-xl font-bold text-foreground">Drivers near you</h4>
-        <span className="text-sm text-muted-foreground">Live · online in green</span>
+      <div className="mb-2 flex items-center justify-between">
+        <h4 className="text-base font-bold text-foreground">Drivers near you</h4>
+        <span className="text-xs text-muted-foreground">Live · online in green</span>
       </div>
-      <div className="mb-5">
+      <div className="mb-3">
         <DriverMap
           client={client}
           category={selectedVehicle}
@@ -914,13 +914,13 @@ function ClientDashboard() {
       </div>
 
       {/* Nearby drivers */}
-      <div className="mb-6">
+      <div className="mb-4">
         <NearbyDrivers client={client} category={selectedVehicle} />
       </div>
 
       {/* Choose a ride */}
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="font-display text-lg font-bold text-foreground">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h3 className="font-display text-base font-bold text-foreground">
           Choose a ride
         </h3>
         {estimating ? (
@@ -937,7 +937,7 @@ function ClientDashboard() {
           </span>
         )}
       </div>
-      <div className="mb-6 space-y-3">
+      <div className="mb-4 space-y-2">
         {vehicles.map((v) => {
           const active = selectedVehicle === v.category;
           return (
@@ -945,7 +945,7 @@ function ClientDashboard() {
               key={v.category}
               onClick={() => setSelectedVehicle(v.category)}
               className={cn(
-                "flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition-all",
+                "flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all",
                 active
                   ? "border-accent bg-accent/10"
                   : "border-border bg-surface-2/40 hover:bg-surface-2"
@@ -953,13 +953,13 @@ function ClientDashboard() {
             >
               <span
                 className={cn(
-                  "grid h-12 w-12 shrink-0 place-items-center rounded-xl",
+                  "grid h-11 w-11 shrink-0 place-items-center rounded-xl",
                   active ? "bg-accent/20" : "bg-surface-2"
                 )}
               >
                 <v.Icon
                   className={cn(
-                    "h-6 w-6",
+                    "h-5 w-5",
                     active ? "text-accent" : "text-muted-foreground"
                   )}
                 />

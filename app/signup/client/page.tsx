@@ -11,10 +11,13 @@ import { Field, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { FadeIn } from "@/components/motion/motion";
 import { FullPageSpinner } from "@/components/ui/spinner";
+import { PhotoUpload } from "@/components/ui/photo-upload";
+import { EmergencyContactField } from "@/components/client/emergency-contact-field";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { signUpWithEmail, signInWithGoogle } from "@/lib/auth";
 import { ensureClientProfile } from "@/lib/profiles";
+import { uploadAvatar } from "@/lib/storage";
 import { getDocument, docs, setDocument } from "@/lib/db";
 import { friendlyErrorMessage } from "@/lib/utils";
 import { PasswordStrength } from "@/components/ui/password-strength";
@@ -32,6 +35,8 @@ export default function ClientSignupPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [avatar, setAvatar] = useState<{ file: Blob; name: string } | null>(null);
+  const [emergency, setEmergency] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -112,6 +117,14 @@ export default function ClientSignupPage() {
       // Firebase trigger that was never actually deployed, so profile docs
       // were never created and sign-up silently failed. We now create it
       // directly with setDoc (merge) so sign-up always works.
+      let avatarUrl: string | null = null;
+      if (avatar) {
+        avatarUrl = await uploadAvatar(
+          authUser.uid,
+          new File([avatar.file], avatar.name)
+        );
+      }
+
       await setDocument(
         docs.client(authUser.uid),
         {
@@ -119,6 +132,8 @@ export default function ClientSignupPage() {
           name: name.trim(),
           phone: phone.trim(),
           email: (authUser.email ?? email.trim()).toLowerCase(),
+          avatarUrl,
+          emergencyContact: emergency.trim() || null,
           shareRides: false,
           ratingAvg: null,
           ratingCount: 0,
@@ -155,6 +170,19 @@ export default function ClientSignupPage() {
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          <div className="flex justify-center pb-2">
+            <PhotoUpload
+              label="Profile picture"
+              hint="A clear photo of you — it shows on your profile and to drivers."
+              crop="round"
+              className="flex flex-col items-center"
+              value={avatar ? null : undefined}
+              onChange={(blob) =>
+                setAvatar(blob ? { file: blob, name: "avatar.jpg" } : null)
+              }
+            />
+          </div>
+
           <Field label="Full name" htmlFor="name" required error={errors.name}>
             <div className="relative">
               <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -211,6 +239,11 @@ export default function ClientSignupPage() {
               />
             </div>
           </Field>
+
+          <EmergencyContactField
+            value={emergency}
+            onChange={setEmergency}
+          />
 
           <Field
             label="Password"

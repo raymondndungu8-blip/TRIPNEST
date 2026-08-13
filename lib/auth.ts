@@ -2,26 +2,64 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithRedirect,
-  signInWithPhoneNumber,
-  RecaptchaVerifier,
+  signInWithCustomToken,
   GoogleAuthProvider,
   sendPasswordResetEmail,
   updatePassword as fbUpdatePassword,
   signOut as fbSignOut,
-  type ConfirmationResult,
   type User,
 } from "firebase/auth"
 import { auth } from "./firebase"
+import { normalizePhone } from "./phone"
 
-let confirmationResult: ConfirmationResult | null = null
+export { normalizePhone }
 
-export function normalizePhone(input: string): string {
-  let p = input.replace(/[\s-]/g, "").trim()
-  if (p.startsWith("+")) return p
-  if (p.startsWith("0")) return "+254" + p.slice(1)
-  if (p.startsWith("254")) return "+" + p
-  if (p.length === 9) return "+254" + p
-  return "+" + p
+// ── Phone OTP (driver sign-in) ────────────────────────────────────────────
+//
+// SMS delivery + verification is handled by our own API routes so it works on
+// any origin (LAN IP, in-app browsers) instead of depending on the reCAPTCHA
+// requirements of Firebase phone auth. On success the route returns a Firebase
+// custom token which signs the driver straight into a stable account.
+
+export interface SendOtpResult {
+  ok: boolean;
+  delivered: boolean;
+  /** Only returned in development so the code can be read/tested. */
+  devCode?: string;
+}
+
+export async function sendPhoneOtp(
+  phone: string
+): Promise<SendOtpResult | undefined> {
+  const res = await fetch("/api/otp/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone }),
+  })
+  const body = (await res.json().catch(() => ({}))) as SendOtpResult & {
+    error?: string;
+  }
+  if (!res.ok || !body.ok) {
+    throw new Error(body.error ?? "Could not send the code. Please try again.")
+  }
+  return body
+}
+
+export async function verifyPhoneOtp(phone: string, token: string): Promise<User> {
+  const res = await fetch("/api/otp/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone, code: token.trim() }),
+  })
+  const body = (await res.json().catch(() => ({}))) as {
+    customToken?: string;
+    error?: string;
+  }
+  if (!res.ok || !body.customToken) {
+    throw new Error(body.error ?? "Incorrect or expired code. Try again.")
+  }
+  const cred = await signInWithCustomToken(auth, body.customToken)
+  return cred.user
 }
 
 export async function signInWithGoogle(): Promise<void> {
@@ -48,23 +86,6 @@ export async function signInWithEmail(
 ): Promise<User> {
   const cred = await signInWithEmailAndPassword(auth, email.trim(), password)
   return cred.user
-}
-
-export async function sendPhoneOtp(phone: string): Promise<void> {
-  const appVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-    size: "invisible",
-  })
-  confirmationResult = await signInWithPhoneNumber(
-    auth,
-    normalizePhone(phone),
-    appVerifier
-  )
-}
-
-export async function verifyPhoneOtp(phone: string, token: string) {
-  if (!confirmationResult) throw new Error("No OTP request found")
-  const result = await confirmationResult.confirm(token.trim())
-  return result.user
 }
 
 export async function resetPassword(email: string): Promise<void> {

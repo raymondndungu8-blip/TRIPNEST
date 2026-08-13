@@ -31,8 +31,11 @@ export function PhoneOtp({
     }
     setBusy(true);
     try {
-      await sendPhoneOtp(phone);
+      const result = await sendPhoneOtp(phone);
       toast(`Code sent to ${normalizePhone(phone)}`, "success");
+      if (result?.devCode) {
+        toast(`Dev code: ${result.devCode}`, "info");
+      }
       setPhase("code");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Could not send code";
@@ -53,7 +56,8 @@ export function PhoneOtp({
       await verifyPhoneOtp(phone, code);
       onVerified(normalizePhone(phone));
     } catch (err) {
-      toast("Incorrect or expired code. Try again.", "error");
+      const msg = err instanceof Error ? err.message : "Incorrect or expired code. Try again.";
+      toast(msg, "error");
     } finally {
       setBusy(false);
     }
@@ -62,7 +66,6 @@ export function PhoneOtp({
   if (phase === "phone") {
     return (
       <form onSubmit={handleSend} className="space-y-4">
-        <div id="recaptcha-container" />
         <Field
           label="Phone number"
           htmlFor="phone"

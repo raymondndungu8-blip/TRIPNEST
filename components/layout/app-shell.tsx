@@ -13,8 +13,8 @@ export function AppShell({
   return (
     <main
       className={cn(
-        "mx-auto w-full max-w-md px-4 pt-5",
-        withNav ? "pb-28" : "pb-8",
+        "mx-auto w-full max-w-md px-3 pt-3",
+        withNav ? "pb-24" : "pb-6",
         className
       )}
     >

@@ -20,11 +20,27 @@ export const metadata: Metadata = {
   title: "TripNest — better the driver.",
   description:
     "TripNest — better the driver. Pre-order drivers for scheduled rides, airport pickups, event travel, and shared rides.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "TripNest",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
   themeColor: "#0b1220",
 };
 
