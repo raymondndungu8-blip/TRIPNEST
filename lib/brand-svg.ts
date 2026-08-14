@@ -7,20 +7,19 @@
 export function markSvg(size = 48): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 48 48">
   <defs>
-    <linearGradient id="tnBladeA" x1="0" y1="1" x2="1" y2="0">
+    <linearGradient id="tnRing" x1="0" y1="1" x2="1" y2="0">
       <stop offset="0" stop-color="#1D4ED8"/>
-      <stop offset="0.55" stop-color="#2563EB"/>
-      <stop offset="1" stop-color="#3B82F6"/>
+      <stop offset="0.52" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#22D3EE"/>
     </linearGradient>
-    <linearGradient id="tnBladeB" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7DD3FC"/>
-      <stop offset="0.5" stop-color="#38BDF8"/>
+    <linearGradient id="tnSwoosh" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563EB"/>
+      <stop offset="0.48" stop-color="#38BDF8"/>
       <stop offset="1" stop-color="#22D3EE"/>
     </linearGradient>
   </defs>
-  <path d="M9 47 C 13 31 21 18 35 7 C 30 25 25 35 21 47 C 17 48 12 48 9 47 Z" fill="url(#tnBladeA)"/>
-  <path d="M39 47 C 35 31 27 18 13 7 C 18 25 23 35 27 47 C 31 48 36 48 39 47 Z" fill="url(#tnBladeB)"/>
-  <path d="M24 20 C 26.5 22.5 26.5 25.5 24 28 C 21.5 25.5 21.5 22.5 24 20 Z" fill="#E0F2FE" opacity="0.85"/>
+  <path d="M39 31 A17 17 0 1 0 16 41" fill="none" stroke="url(#tnRing)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M7 24 C14 23 20 27 26 33 L35 42 L28 47 L19 38 C14 33 10 29 5 29 Z" fill="url(#tnSwoosh)"/>
 </svg>`;
 }
 
