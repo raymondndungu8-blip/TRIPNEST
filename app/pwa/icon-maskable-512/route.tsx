@@ -13,7 +13,7 @@ export function GET() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #0f172a 0%, #111a2e 100%)",
+          background: "#0b1220",
       }}
     >
       {/* Maskable artwork must be centered within the safe zone (80% of the
@@ -21,12 +21,12 @@ export function GET() {
       <div
         style={{
           display: "flex",
-          width: 410,
-          height: 410,
+          width: 280,
+          height: 280,
           backgroundImage: `url("data:image/svg+xml;base64,${Buffer.from(
             markSvg(48)
           ).toString("base64")}")`,
-          backgroundSize: "410px 410px",
+          backgroundSize: "280px 280px",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center",
         }}

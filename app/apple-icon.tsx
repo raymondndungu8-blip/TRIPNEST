@@ -15,11 +15,11 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #0f172a 0%, #111a2e 100%)",
+          background: "#0b1220",
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={markDataUri(120)} width={120} height={120} alt="TripNest" />
+        <img src={markDataUri(92)} width={92} height={92} alt="TripNest" />
       </div>
     ),
     { ...size }

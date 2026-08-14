@@ -13,18 +13,18 @@ export function GET() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #0f172a 0%, #111a2e 100%)",
+          background: "#0b1220",
       }}
     >
       <div
         style={{
           display: "flex",
-          width: 256,
-          height: 256,
+          width: 184,
+          height: 184,
           backgroundImage: `url("data:image/svg+xml;base64,${Buffer.from(
             markSvg(48)
           ).toString("base64")}")`,
-          backgroundSize: "256px 256px",
+          backgroundSize: "184px 184px",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center",
         }}
