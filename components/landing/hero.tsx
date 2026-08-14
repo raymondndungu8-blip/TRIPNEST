@@ -77,7 +77,7 @@ export function Hero({
           variants={item}
           className="mt-8 font-display text-lg font-medium tracking-wide text-accent"
         >
-          better the driver.
+          Better the driver you know.
         </motion.p>
 
         {/* Subtitle */}

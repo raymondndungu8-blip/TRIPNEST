@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "TripNest — better the driver.",
+    name: "TripNest — Better the driver you know.",
     short_name: "TripNest",
     description:
       "Pre-order drivers for scheduled rides, airport pickups, event travel, and shared rides.",

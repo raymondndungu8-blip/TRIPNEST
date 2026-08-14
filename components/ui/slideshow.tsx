@@ -3,30 +3,46 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
-const slides = [
+export const slides = [
   {
-    img: "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1920&q=80",
-    text: ["PRE-BOOK", "EXCLUSIVE RIDES"],
+    img: "/images/tripnest-hero.jpg",
+    title: "Better the driver",
+    accent: "you know.",
+    description: "Pre-book a dependable ride for the moments that matter.",
   },
   {
-    img: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1920&q=80",
-    text: ["TRANSIT TO", "YOUR NEXT EVENT"],
+    img: "/images/tripnest-event-nairobi.jpg",
+    title: "Make the night",
+    accent: "yours.",
+    description: "Arrive ready for the moments worth remembering.",
   },
   {
-    img: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1920&q=80",
-    text: ["TIMED AIRPORT", "TRANSFERS"],
+    img: "/images/tripnest-airport.jpg",
+    title: "On time,",
+    accent: "every time.",
+    description: "Airport transfers planned around your schedule.",
   },
   {
-    img: "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=1920&q=80",
-    text: ["TRUSTED", "PROFESSIONAL DRIVERS"],
+    img: "/images/event-nairobi-run.jpg",
+    title: "A better way",
+    accent: "to move.",
+    description: "Reliable transport for the city’s biggest days.",
   },
   {
-    img: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1920&q=80",
-    text: ["THE RIDE YOU KNOW,", "THE SERVICE YOU TRUST"],
+    img: "/images/event-diani-beach.jpg",
+    title: "Take the scenic",
+    accent: "route.",
+    description: "Weekend plans deserve a smoother journey.",
   },
-];
+] as const;
 
-export function Slideshow() {
+export type TripNestSlide = (typeof slides)[number];
+
+export function Slideshow({
+  onSlideChange,
+}: {
+  onSlideChange?: (slide: TripNestSlide) => void;
+}) {
   const [current, setCurrent] = useState(0);
 
   const nextSlide = useCallback(() => {
@@ -38,6 +54,10 @@ export function Slideshow() {
   }, []);
 
   useEffect(() => {
+    onSlideChange?.(slides[current]);
+  }, [current, onSlideChange]);
+
+  useEffect(() => {
     const timer = window.setInterval(nextSlide, 6000);
     return () => clearInterval(timer);
   }, [nextSlide]);
@@ -46,15 +66,14 @@ export function Slideshow() {
     <div className="slideshow">
       {slides.map((slide, i) => (
         <div
-          key={i}
+          key={slide.img}
           className={`slide ${i === current ? "active" : ""}`}
           style={{ backgroundImage: `url(${slide.img})` }}
           aria-hidden={i !== current}
         >
-          <div className="slide-text">
-            {slide.text.map((t, j) => (
-              <span key={j}>{t}</span>
-            ))}
+          <div className="slide-text" aria-hidden="true">
+            <span>{slide.title}</span>
+            <span>{slide.accent}</span>
           </div>
         </div>
       ))}
@@ -66,8 +85,18 @@ export function Slideshow() {
         <ArrowRight className="h-5 w-5" aria-hidden />
       </button>
 
-      <div className="counter">
-        {String(current + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
+      <div className="pagination-dots" role="tablist" aria-label="TripNest intro slides">
+        {slides.map((slide, i) => (
+          <button
+            key={slide.img}
+            type="button"
+            role="tab"
+            aria-selected={i === current}
+            aria-label={`Show slide ${i + 1}`}
+            className={`pagination-dot ${i === current ? "active" : ""}`}
+            onClick={() => setCurrent(i)}
+          />
+        ))}
       </div>
     </div>
   );

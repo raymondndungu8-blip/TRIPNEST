@@ -144,13 +144,13 @@ export default function ClientSignupPage() {
 
   return (
     <AppShell withNav={false}>
-      <PageHeader title="Create Account" back />
+      <PageHeader title="Create your account" subtitle="A smoother way to get where you’re going." back />
 
       <FadeIn>
         <div className="mb-6 flex flex-col items-start gap-3">
           <Logo size={36} />
           <p className="text-sm text-muted-foreground">
-            Join the elite network of professional transport logistics.
+            Plan rides in advance, discover what’s on, and travel with confidence.
           </p>
         </div>
 
@@ -231,7 +231,7 @@ export default function ClientSignupPage() {
           </Field>
 
           <Button type="submit" size="lg" fullWidth loading={submitting}>
-            {submitting ? "Creating account…" : "Create account"}
+            {submitting ? "Creating your account…" : "Create account"}
           </Button>
         </form>
 

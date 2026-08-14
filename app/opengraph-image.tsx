@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { markDataUri, carDataUri, BRAND } from "@/lib/brand-svg";
 
 export const runtime = "nodejs";
-export const alt = "TripNest — better the driver.";
+export const alt = "TripNest — Better the driver you know.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

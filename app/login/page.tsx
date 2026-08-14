@@ -144,13 +144,13 @@ export default function LoginPage() {
 
   return (
     <AppShell withNav={false}>
-      <PageHeader title="Welcome back" back />
+      <PageHeader title="Welcome back" subtitle="Your next journey starts here." back />
 
       <FadeIn>
         <div className="mb-6 flex flex-col items-start gap-3">
           <Logo size={36} />
           <p className="text-sm text-muted-foreground">
-            Log in to your TripNest account to continue.
+            Sign in to manage your rides, plans, and preferred drivers.
           </p>
         </div>
 
@@ -219,11 +219,11 @@ export default function LoginPage() {
             loading={submitting}
             disabled={!!lockedUntil}
           >
-            {lockedUntil
+              {lockedUntil
               ? `Locked (${lockSecondsLeft}s)`
               : submitting
-                ? "Logging in…"
-                : "Log in"}
+                ? "Signing in…"
+                : "Sign in"}
           </Button>
         </form>
 

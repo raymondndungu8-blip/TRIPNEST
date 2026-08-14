@@ -144,8 +144,8 @@ textarea::placeholder {
   background-size: cover;
   background-position: center;
   opacity: 0;
-  transform: scale(1.05);
-  transition: opacity 1.5s ease-in-out;
+  transform: scale(1.02);
+  transition: opacity 700ms cubic-bezier(0.23, 1, 0.32, 1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -164,16 +164,7 @@ textarea::placeholder {
 .slide.active {
   opacity: 1;
   z-index: 1;
-  animation: panLeftToRight 15s ease-in-out infinite alternate;
-}
-
-@keyframes panLeftToRight {
-  0% {
-    transform: scale(1.12) translateX(-2%);
-  }
-  100% {
-    transform: scale(1.12) translateX(2%);
-  }
+  animation: none;
 }
 
 .slide-text {
@@ -186,34 +177,42 @@ textarea::placeholder {
   flex-direction: column;
   gap: 0.5rem;
   font-family: var(--font-sora), sans-serif;
-  transform: translateY(calc(-2vh + 20px));
+  transform: translateY(12px);
   opacity: 0;
-  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.2s ease-in-out;
-  transition-delay: 0.3s;
+  transition: transform 480ms cubic-bezier(0.23, 1, 0.32, 1), opacity 480ms ease-out;
+  transition-delay: 120ms;
 }
 
 .slide.active .slide-text {
-  transform: translateY(-2vh);
+  transform: translateY(0);
   opacity: 1;
 }
 
 .slide-text span {
-  font-size: clamp(2rem, 6vw, 4.75rem);
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  line-height: 0.98;
-  color: #ffffff;
+  font-size: clamp(1.85rem, 5.4vw, 4.25rem);
+  font-weight: 800;
+  letter-spacing: 0.075em;
+  line-height: 1.04;
+  color: #7dd3fc;
   text-shadow:
-    0 3px 8px rgba(0, 0, 0, 0.95),
-    0 14px 38px rgba(0, 0, 0, 0.75);
+    0 2px 3px rgba(0, 0, 0, 0.9),
+    0 8px 24px rgba(0, 0, 0, 0.72);
 }
 
 .slide-text span:first-child {
-  background: linear-gradient(135deg, #ffffff 0%, #bff7ff 48%, #55e6ff 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.9));
+  color: #7dd3fc;
+  text-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.92),
+    0 0 22px rgba(125, 211, 252, 0.18),
+    0 8px 24px rgba(0, 0, 0, 0.72);
+}
+
+.slide-text span:last-child {
+  color: #9cecff;
+  text-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.92),
+    0 0 22px rgba(156, 236, 255, 0.16),
+    0 8px 24px rgba(0, 0, 0, 0.72);
 }
 
 /* Controls & Counter */
@@ -281,5 +280,272 @@ textarea::placeholder {
     top: 1.25rem;
     right: 1rem;
     bottom: auto;
+  }
+}
+
+/* Mobile application shell */
+.tripnest-mobile-app {
+  min-height: 100dvh;
+  background: #050913;
+  color: var(--foreground);
+}
+
+.tripnest-mobile-screen {
+  position: relative;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #08101d;
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.42);
+}
+
+.tripnest-mobile-hero {
+  position: relative;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.tripnest-mobile-hero .slideshow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.tripnest-mobile-hero .slide {
+  background-position: 62% center;
+}
+
+.tripnest-mobile-hero .slide-text {
+  display: none;
+}
+
+.tripnest-mobile-hero .nav {
+  display: none;
+}
+
+.tripnest-mobile-hero .counter {
+  top: 1.25rem;
+  right: 1.25rem;
+  bottom: auto;
+  z-index: 5;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.62);
+  background: rgba(5, 9, 19, 0.28);
+}
+
+.tripnest-mobile-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(3, 8, 16, 0.68) 0%, rgba(3, 8, 16, 0.04) 27%, rgba(3, 8, 16, 0.16) 45%, rgba(3, 8, 16, 0.96) 100%),
+    linear-gradient(90deg, rgba(3, 8, 16, 0.35), transparent 65%);
+}
+
+.tripnest-mobile-header,
+.tripnest-mobile-hero-copy,
+.tripnest-mobile-sheet {
+  position: relative;
+  z-index: 3;
+}
+
+.tripnest-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(1.25rem, env(safe-area-inset-top)) 1.25rem 0;
+}
+
+.tripnest-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(5, 9, 19, 0.32);
+  padding: 0.42rem 0.68rem;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(14px);
+}
+
+.tripnest-mobile-hero-copy {
+  position: absolute;
+  inset: 4.85rem 1.25rem auto;
+  max-width: 21rem;
+}
+
+.tripnest-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  color: #7dd3fc;
+  font-size: 0.63rem;
+  font-weight: 700;
+  letter-spacing: 0.19em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.tripnest-mobile-hero-copy h1 {
+  margin-top: 0.85rem;
+  text-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+.tripnest-mobile-sheet {
+  position: absolute;
+  inset: auto 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.75rem 1.75rem 0 0;
+  background: linear-gradient(180deg, rgba(10, 18, 32, 0.9), rgba(5, 10, 19, 0.98));
+  padding: 0.9rem 1.1rem max(0.85rem, env(safe-area-inset-bottom));
+  box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(24px);
+}
+
+@media (min-width: 31rem) {
+  .tripnest-mobile-app {
+    display: grid;
+    place-items: center;
+    min-height: 100dvh;
+    padding: 1rem;
+    background:
+      radial-gradient(600px 420px at 50% 30%, rgba(0, 212, 255, 0.08), transparent 70%),
+      #030711;
+  }
+
+  .tripnest-mobile-screen {
+    width: min(390px, calc(100vw - 2rem), calc((100dvh - 2rem) * 0.462));
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 390 / 844;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 2.75rem;
+    box-shadow:
+      0 0 0 6px rgba(255, 255, 255, 0.025),
+      0 30px 80px rgba(0, 0, 0, 0.56),
+      0 0 70px rgba(0, 212, 255, 0.07);
+  }
+
+  .tripnest-mobile-screen::before {
+    content: "";
+    position: absolute;
+    top: 0.72rem;
+    left: 50%;
+    z-index: 20;
+    width: 5.25rem;
+    height: 1.35rem;
+    transform: translateX(-50%);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.74);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.32);
+    pointer-events: none;
+  }
+
+  .tripnest-mobile-hero {
+    min-height: 100%;
+    height: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .tripnest-mobile-hero-copy {
+    inset: 4.65rem 1.1rem auto;
+  }
+
+  .tripnest-mobile-hero-copy h1 {
+    font-size: 1.52rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tripnest-mobile-hero .slide {
+    transition: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .tripnest-mobile-screen {
+    max-width: none;
+  }
+}
+
+.tripnest-copy-transition {
+  animation: tripnestCopyIn 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes tripnestCopyIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tripnest-copy-transition {
+    animation: none;
+  }
+}
+
+.pagination-dots {
+  position: absolute;
+  top: 1.35rem;
+  right: 1.1rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.38rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(3, 8, 16, 0.34);
+  backdrop-filter: blur(12px);
+}
+
+.pagination-dot {
+  width: 0.34rem;
+  height: 0.34rem;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.34);
+  cursor: pointer;
+  transition: width 180ms cubic-bezier(0.23, 1, 0.32, 1), background-color 180ms ease, transform 180ms ease;
+}
+
+.pagination-dot.active {
+  width: 0.85rem;
+  background: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.58);
+}
+
+.pagination-dot:hover {
+  background: #7dd3fc;
+  transform: scale(1.12);
+}
+
+.pagination-dot:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pagination-dot {
+    transition: none;
   }
 }

@@ -77,7 +77,7 @@ export function carDataUri(): string {
 
 export const BRAND = {
   name: "TripNest",
-  motto: "better the driver.",
+  motto: "Better the driver you know.",
   navy: "#0b1220",
   surface: "#111a2e",
   accent: "#38bdf8",

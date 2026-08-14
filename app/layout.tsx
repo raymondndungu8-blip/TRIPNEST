@@ -17,9 +17,9 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "TripNest — better the driver.",
+  title: "TripNest — Better the driver you know.",
   description:
-    "TripNest — better the driver. Pre-order drivers for scheduled rides, airport pickups, event travel, and shared rides.",
+    "TripNest — Better the driver you know. Pre-order drivers for scheduled rides, airport pickups, event travel, and shared rides.",
 };
 
 export const viewport: Viewport = {
