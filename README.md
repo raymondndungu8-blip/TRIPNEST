@@ -1,6 +1,6 @@
 # TripNest
 
-![TripNest — Better the drive you know](tripnest-github-social-preview.png)
+![TripNest — Better the drive you know](tripnest-github-social-preview.jpg)
 
 > **Live app:** [tripnest-puce.vercel.app](https://tripnest-puce.vercel.app)
 
