@@ -6,12 +6,31 @@ const VAPID_PUBLIC_KEY =
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY ?? ""
 
+let VAPID_CONFIGURED = false
+
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(
-    "mailto:raymondndungu8@gmail.com",
-    VAPID_PUBLIC_KEY,
-    VAPID_PRIVATE_KEY
-  )
+  try {
+    // VAPID private keys are 32-byte URL-safe base64 values. Accept harmless
+    // whitespace/padding from deployment secret stores, but never let a bad
+    // secret crash Next.js during build-time route data collection.
+    const normalizedPrivateKey = VAPID_PRIVATE_KEY
+      .trim()
+      .replace(/\s+/g, "")
+      .replace(/=+$/, "")
+
+    if (/^[A-Za-z0-9_-]{43}$/.test(normalizedPrivateKey)) {
+      webpush.setVapidDetails(
+        "mailto:raymondndungu8@gmail.com",
+        VAPID_PUBLIC_KEY,
+        normalizedPrivateKey
+      )
+      VAPID_CONFIGURED = true
+    } else {
+      console.warn("[webpush] Ignoring an invalid VAPID private key")
+    }
+  } catch (err) {
+    console.warn("[webpush] VAPID configuration skipped", err)
+  }
 }
 
 /** Number of times we retry a dead push subscription before pruning it. */
@@ -33,6 +52,8 @@ export async function sendPushToSubscription(
   payload: PushPayload,
   failures = 0
 ): Promise<"sent" | "gone" | "failed"> {
+  if (!VAPID_CONFIGURED) return "failed"
+
   try {
     await webpush.sendNotification(
       sub,
