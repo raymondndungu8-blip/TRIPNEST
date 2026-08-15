@@ -2,12 +2,13 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "fire
 import { app } from "./firebase"
 import { docs, patchDocument } from "./db"
 
-const storage = getStorage(app)
+const storage = app ? getStorage(app) : null
 
 /** Upload a browser File/Blob under a folder and return a cache-busted URL. */
 export async function uploadFile(folder: string, file: File): Promise<string> {
   const ext = file.name.split(".").pop() ?? "jpg"
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+  if (!storage) throw new Error("Firebase Storage is not configured")
   const storageRef = ref(storage, path)
 
   await uploadBytes(storageRef, file)

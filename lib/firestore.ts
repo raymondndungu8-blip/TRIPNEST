@@ -1,4 +1,4 @@
-import { getFirestore } from "firebase/firestore"
+import { getFirestore, type Firestore } from "firebase/firestore"
 import { app } from "./firebase"
 
-export const db = getFirestore(app)
+export const db = (app ? getFirestore(app) : null) as Firestore

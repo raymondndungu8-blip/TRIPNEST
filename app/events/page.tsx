@@ -114,17 +114,17 @@ export default function EventsPage() {
 
       {/* Heading */}
       <h1 className="mb-1 font-display text-2xl font-extrabold text-foreground">
-        Upcoming Events
+        Go somewhere worth remembering
       </h1>
       <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
-        Arrive in style. Shared or solo, we&apos;ve got your ride covered.
+        Curated plans, reliable rides, and a smoother way to get there.
       </p>
 
       {/* Search bar */}
       <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border bg-surface-2/60 px-4 py-3">
         <Search className="h-5 w-5 text-muted-foreground" />
         <input
-          placeholder="Search events or locations..."
+          placeholder="Search by event or location"
           className="input-transparent w-full bg-transparent text-[15px] focus:outline-none"
         />
       </div>
@@ -139,10 +139,10 @@ export default function EventsPage() {
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm font-bold text-foreground">
-            Airport Transfers
+            Airport transfers
           </p>
           <p className="text-xs text-muted-foreground">
-            Book a ride to JKIA · See upcoming flight departures
+            Timed pickups to and from JKIA
           </p>
         </div>
         <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />

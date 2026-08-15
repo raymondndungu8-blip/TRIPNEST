@@ -589,6 +589,7 @@ function ClientDashboard() {
     ...v,
     price: perPersonFare(v.category, rideType, passengers),
   }));
+  const selected = vehicles.find((v) => v.category === selectedVehicle) ?? vehicles[0];
 
   // Flat-rate prices only show once the client has entered a destination
   // (plus a date & time, when scheduling a ride).
@@ -699,7 +700,7 @@ function ClientDashboard() {
   }
 
   return (
-    <AppShell className="max-w-md bg-[#060a13] px-3 pt-3">
+    <AppShell className="tripnest-client-dashboard max-w-md bg-[#060a13] px-4 pt-6">
       <MenuDrawer
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -707,34 +708,48 @@ function ClientDashboard() {
       />
 
       {/* Top bar */}
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
-          className="grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition-colors hover:bg-white/5 hover:text-foreground"
+          className="grid h-10 w-10 place-items-center rounded-xl border border-white/[0.06] text-slate-400 transition-colors hover:bg-white/5 hover:text-foreground"
           aria-label="Menu"
           aria-haspopup="dialog"
           aria-expanded={menuOpen}
         >
           <Menu className="h-5 w-5" />
         </button>
-        <span className="font-display text-lg font-bold uppercase tracking-[0.26em] text-white">
+        <span className="font-display text-[1.15rem] font-bold uppercase tracking-[0.22em] text-white">
           TRIPNEST
         </span>
         <Avatar name={client.name} size={36} className="shadow-[0_0_28px_rgba(0,212,255,0.45)]" />
       </div>
 
+      <div className="mb-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+          Good to see you, {client.name.split(" ")[0]}
+        </p>
+        <h1 className="mt-1 font-display text-[1.65rem] font-extrabold leading-tight tracking-[-0.035em] text-foreground">
+          Where are you heading?
+        </h1>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          Plan your next ride in a few simple steps.
+        </p>
+      </div>
+
       {/* Ride Now / Schedule tabs */}
-      <div className="mb-3 grid grid-cols-2 gap-2">
+      <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl border border-cyan-400/10 bg-[#0d1728] p-1.5">
         {(["now", "schedule"] as const).map((m) => (
           <button
             key={m}
+            type="button"
+            aria-pressed={mode === m}
             onClick={() => setMode(m)}
             className={cn(
-              "h-12 rounded-2xl text-[15px] font-bold transition-all",
+              "h-12 rounded-xl text-sm font-bold transition-all",
               mode === m
-                ? "bg-accent text-[#06101c] shadow-[0_0_26px_rgba(0,212,255,0.28)]"
-                : "bg-[#111a2b] text-slate-500 hover:text-foreground"
+                ? "bg-accent text-[#06101c] shadow-[0_0_22px_rgba(0,212,255,0.24)]"
+                : "bg-transparent text-slate-500 hover:bg-white/[0.04] hover:text-foreground"
             )}
           >
             {m === "now" ? "Ride Now" : "Schedule"}
@@ -743,9 +758,9 @@ function ClientDashboard() {
       </div>
 
       {/* Location fields */}
-      <div className="mb-3 overflow-hidden rounded-2xl border border-cyan-400/10 bg-[#10182a]/92 shadow-[0_18px_55px_rgba(0,0,0,0.34)]">
-        <div className="p-3">
-          <div className="flex items-center gap-2.5 border-b border-white/[0.06] pb-3">
+      <div className="mb-5 overflow-hidden rounded-[1.35rem] border border-cyan-400/10 bg-[#10182a]/92 shadow-[0_18px_55px_rgba(0,0,0,0.3)]">
+        <div className="p-4">
+          <div className="flex items-center gap-3 border-b border-white/[0.06] pb-4">
             <span className="grid h-8 w-8 shrink-0 place-items-center">
               <span className="h-2.5 w-2.5 rounded-full border-2 border-muted-foreground" />
             </span>
@@ -755,9 +770,10 @@ function ClientDashboard() {
                 setPickup(e.target.value);
                 setPickupCoords(null);
               }}
-              placeholder="Current Location"
+              placeholder="Pickup location"
+              aria-label="Pickup location"
               maxLength={200}
-              className="input-transparent w-full bg-transparent text-[0.95rem] font-medium text-slate-200 placeholder:text-slate-500 focus:outline-none"
+              className="input-transparent w-full bg-transparent text-[15px] font-medium text-slate-200 placeholder:text-slate-500 focus:outline-none"
             />
             <button
               type="button"
@@ -781,9 +797,10 @@ function ClientDashboard() {
             <input
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
-              placeholder="Where to?"
+              placeholder="Where are you going?"
+              aria-label="Destination"
               maxLength={200}
-              className="input-transparent w-full bg-transparent text-[0.95rem] font-medium text-slate-200 placeholder:text-slate-500 focus:outline-none"
+              className="input-transparent w-full bg-transparent text-[15px] font-medium text-slate-200 placeholder:text-slate-500 focus:outline-none"
             />
           </div>
 
@@ -829,9 +846,12 @@ function ClientDashboard() {
       </div>
 
       {/* Ride type */}
-      <div className="mb-3">
-        <h4 className="mb-2 text-sm font-bold text-foreground">Ride type</h4>
-        <div className="grid grid-cols-2 gap-2">
+      <div className="mb-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h4 className="text-sm font-bold uppercase tracking-[0.12em] text-muted-foreground">Ride type</h4>
+          <span className="text-xs text-muted-foreground">Choose how you travel</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           {([
             { value: "private" as RideType, label: "Private", icon: Car },
             { value: "cost_sharing" as RideType, label: "Cost sharing", icon: Users2 },
@@ -840,12 +860,14 @@ function ClientDashboard() {
             return (
               <button
                 key={opt.value}
+                type="button"
+                aria-pressed={active}
                 onClick={() => {
                   setRideType(opt.value);
                   if (opt.value === "private") setPassengers(1);
                 }}
                 className={cn(
-                  "flex min-h-[3.4rem] items-center justify-center gap-2 rounded-2xl border text-sm font-bold transition-all",
+                  "flex min-h-[3.55rem] items-center justify-center gap-2 rounded-2xl border text-sm font-bold transition-all",
                   active
                     ? "border-accent bg-accent/[0.08] text-accent shadow-[0_0_18px_rgba(0,212,255,0.12)]"
                     : "border-cyan-400/10 bg-transparent text-slate-500 hover:text-foreground"
@@ -900,9 +922,12 @@ function ClientDashboard() {
       )}
 
       {/* Live driver map */}
-      <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-base font-bold text-foreground">Drivers near you</h4>
-        <span className="text-xs text-muted-foreground">Live · online in green</span>
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Live availability</p>
+          <h4 className="mt-0.5 text-lg font-bold text-foreground">Drivers near you</h4>
+        </div>
+        <span className="rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success">Online now</span>
       </div>
       <div className="mb-3">
         <DriverMap
@@ -919,10 +944,13 @@ function ClientDashboard() {
       </div>
 
       {/* Choose a ride */}
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 className="font-display text-base font-bold text-foreground">
-          Choose a ride
-        </h3>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Your options</p>
+          <h3 className="mt-0.5 font-display text-lg font-bold text-foreground">
+            Choose a ride
+          </h3>
+        </div>
         {estimating ? (
           <span className="text-xs text-muted-foreground">Estimating…</span>
         ) : estimate ? (
@@ -942,12 +970,14 @@ function ClientDashboard() {
           const active = selectedVehicle === v.category;
           return (
             <button
-              key={v.category}
+                key={v.category}
+              type="button"
+              aria-pressed={active}
               onClick={() => setSelectedVehicle(v.category)}
               className={cn(
-                "flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all",
+                "flex w-full items-center gap-3 rounded-[1.15rem] border p-3.5 text-left transition-all",
                 active
-                  ? "border-accent bg-accent/10"
+                  ? "border-accent bg-accent/10 ring-1 ring-accent/25"
                   : "border-border bg-surface-2/40 hover:bg-surface-2"
               )}
             >
@@ -991,12 +1021,21 @@ function ClientDashboard() {
       </div>
 
       {/* Confirm button */}
-      <MotionButton
-        label="Confirm Booking"
-        loadingLabel="Booking…"
-        loading={submitting}
-        onClick={handleConfirm}
-      />
+      <div className="sticky bottom-24 z-10 -mx-1 mt-2 rounded-2xl border border-cyan-400/10 bg-[#060a13]/85 p-2 backdrop-blur-xl">
+        <div className="mb-2 flex items-center justify-between px-1.5 text-xs">
+          <span className="text-muted-foreground">{selected.name}</span>
+          <span className="font-semibold text-foreground">{formatKES(selected.price)} estimated</span>
+        </div>
+        <Button
+          size="lg"
+          fullWidth
+          loading={submitting}
+          onClick={handleConfirm}
+          className="h-12 rounded-xl bg-accent text-[13px] font-bold uppercase tracking-[0.08em] text-[#06101c] shadow-[0_10px_28px_rgba(0,212,255,0.2)] hover:bg-cyan-300"
+        >
+          {submitting ? "Booking…" : "Request this ride"}
+        </Button>
+      </div>
 
       {/* Active ride tracker — only shows rides in progress */}
       <ActiveRidesSection client={client} />

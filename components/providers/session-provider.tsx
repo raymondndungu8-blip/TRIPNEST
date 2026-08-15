@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { onAuthStateChanged, getRedirectResult, type User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, firebaseConfigured } from "@/lib/firebase";
 import { signOut as authSignOut } from "@/lib/auth";
 import { ensureClientProfile } from "@/lib/profiles";
 import { getDocument, docs } from "@/lib/db";
@@ -91,6 +91,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    if (!firebaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
     let active = true;
 
     // Finish any pending Google redirect sign-in (the listener below completes

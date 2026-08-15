@@ -10,17 +10,26 @@ import { formatDate } from "@/lib/utils";
 
 /** Local fallback banners for seeded events (matched by keyword in the name). */
 const EVENT_IMAGE_MAP: Record<string, string> = {
-  summertides: "/images/event-summertides.png",
-  diani: "/images/event-diani-beach.png",
-  "night run": "/images/event-nairobi-run.png",
-  nairobi: "/images/event-nairobi-run.png",
+  summertides: "/images/event-summertides.jpg",
+  diani: "/images/event-diani-beach.jpg",
+  "night run": "/images/event-nairobi-run.jpg",
+  nairobi: "/images/tripnest-event-nairobi.jpg",
 };
 
 function resolveEventImage(event: EventItem): string | null {
-  if (event.image_url) return event.image_url;
+  // Prefer the curated local fallback for known event names. This prevents
+  // older seeded records from pointing at stale .png paths and guarantees the
+  // event cards use the photographs shipped with the current UI revision.
   const lower = event.name.toLowerCase();
   for (const [key, src] of Object.entries(EVENT_IMAGE_MAP)) {
     if (lower.includes(key)) return src;
+  }
+
+  if (event.image_url) {
+    return event.image_url.replace(
+      /\/images\/event-(summertides|diani-beach|nairobi-run)\.png$/,
+      "/images/event-$1.jpg"
+    );
   }
   return null;
 }
@@ -65,8 +74,8 @@ export function EventCard({
           />
         )}
         {/* Trending badge */}
-        <span className="absolute right-3 top-3 rounded-full bg-accent/90 px-3 py-1 text-[11px] font-semibold text-background">
-          Trending
+          <span className="absolute left-3 top-3 rounded-full border border-white/20 bg-black/35 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-md">
+          Featured event
         </span>
       </div>
 
@@ -132,7 +141,7 @@ export function EventCard({
             onClick={() => onBook(event, "private")}
             className="border-accent/40 text-accent hover:bg-accent/10"
           >
-            Book Ride
+              Plan my ride
           </Button>
         </div>
       </div>
