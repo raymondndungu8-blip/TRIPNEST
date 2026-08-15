@@ -6,7 +6,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { fadeUp } from "@/components/motion/motion";
 import { motion } from "framer-motion";
 import type { EventItem, RideType } from "@/lib/types";
-import { formatDate, formatKES } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 /** Local fallback banners for seeded events (matched by keyword in the name). */
 const EVENT_IMAGE_MAP: Record<string, string> = {
@@ -102,36 +102,26 @@ export function EventCard({
           </div>
         </div>
 
-        {/* Budget + avatars row */}
-        <div className="mt-4 flex items-end justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Est. Budget
-            </p>
-            <p className="mt-0.5 text-lg font-bold text-accent">
-              {formatKES(event.estimated_budget)}
-            </p>
-          </div>
-          {driverPreviews.length > 0 && (
-            <div className="flex items-center">
-              <div className="flex -space-x-2">
-                {driverPreviews.slice(0, 3).map((d) => (
-                  <Avatar
-                    key={d.id}
-                    name={d.name}
-                    size={28}
-                    className="ring-2 ring-surface"
-                  />
-                ))}
-              </div>
-              {driverCount > 3 && (
-                <span className="ml-1 text-xs font-medium text-muted-foreground">
-                  +{driverCount - 3}
-                </span>
-              )}
+        {/* Available drivers */}
+        {driverPreviews.length > 0 && (
+          <div className="mt-4 flex items-center">
+            <div className="flex -space-x-2">
+              {driverPreviews.slice(0, 3).map((d) => (
+                <Avatar
+                  key={d.id}
+                  name={d.name}
+                  size={28}
+                  className="ring-2 ring-surface"
+                />
+              ))}
             </div>
-          )}
-        </div>
+            {driverCount > 3 && (
+              <span className="ml-1 text-xs font-medium text-muted-foreground">
+                +{driverCount - 3}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Book button */}
         <div className="mt-5">

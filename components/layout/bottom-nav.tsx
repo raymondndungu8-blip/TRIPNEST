@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Home, CalendarHeart, Route, UserCircle, MessageCircle, Wallet } from "lucide-react";
 import { useSession } from "@/components/providers/session-provider";
+import { useUnreadCount } from "@/hooks/use-unread";
 import { cn } from "@/lib/utils";
 
 const CLIENT_TABS = [
@@ -23,7 +24,12 @@ const DRIVER_TABS = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { role } = useSession();
+  const { role, client, driver } = useSession();
+
+  // Live unread count for the active role, shown on the Inbox tab app-wide.
+  const unreadRole = role === "driver" ? "driver" : "client";
+  const unreadId = role === "driver" ? (driver?.id ?? "") : (client?.id ?? "");
+  const unread = useUnreadCount(unreadRole, unreadId);
 
   // Hide on landing / signup screens.
   if (
@@ -38,8 +44,8 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto max-w-md px-4 pb-3">
-        <div className="flex items-center justify-around rounded-[1.7rem] border border-white/10 bg-[#111a2b]/82 px-2 py-2 shadow-[0_18px_55px_rgba(0,0,0,0.52)] backdrop-blur-xl">
+      <div className="mx-auto max-w-md px-3 pb-2">
+        <div className="flex items-center justify-around rounded-2xl border border-white/10 bg-[#111a2b]/82 px-1.5 py-1.5 shadow-[0_18px_55px_rgba(0,0,0,0.52)] backdrop-blur-xl">
           {tabs.map((tab) => {
             const active =
               pathname === tab.href ||
@@ -52,18 +58,25 @@ export function BottomNav() {
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "relative flex min-w-[64px] flex-col items-center gap-1 rounded-2xl px-3 py-2 text-[11px] font-medium transition-colors",
+                  "relative flex min-w-[52px] flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5 text-[10px] font-medium transition-colors",
                   active ? "text-accent" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {active && (
                   <motion.span
                     layoutId="nav-active"
-                    className="absolute inset-0 -z-10 rounded-2xl bg-accent/18 shadow-[0_10px_28px_rgba(0,212,255,0.22)]"
+                    className="absolute inset-0 -z-10 rounded-xl bg-accent/18 shadow-[0_10px_28px_rgba(0,212,255,0.22)]"
                     transition={{ type: "spring", stiffness: 350, damping: 30 }}
                   />
                 )}
-                <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
+                <span className="relative">
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.4 : 2} />
+                  {tab.href.includes("/inbox") && unread > 0 && (
+                    <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-none text-white shadow-[0_4px_12px_rgba(220,38,38,0.5)]">
+                      {unread > 99 ? "99+" : unread}
+                    </span>
+                  )}
+                </span>
                 {tab.label}
               </Link>
             );

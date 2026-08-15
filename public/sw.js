@@ -1,19 +1,30 @@
 /* TripNest service worker — offline app shell + web push notifications.
  *
  * Strategy:
- *  - Precache the app shell (fonts, icons, critical assets) on install.
- *  - Navigations: network-first with a cached fallback so the app still
- *    opens offline.
+ *  - Precache the app shell (pages, icons, manifest) on install.
+ *  - Navigations: cache-first with background refresh, so tapping the app
+ *    paints instantly on repeat launches (falls back to the shell / offline
+ *    page when unreachable).
  *  - Static assets (_next/static, images): stale-while-revalidate.
  *  - Push: fire a notification for ride requests, messages and payment
  *    confirmations (delivered by the app's notification service).
  */
 
-const VERSION = "tripnest-v1";
+const VERSION = "tripnest-v2";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 
-const SHELL_URLS = ["/", "/login", "/events", "/airport", "/offline"];
+const SHELL_URLS = [
+  "/",
+  "/login",
+  "/offline",
+  "/manifest.webmanifest",
+  "/icon.svg",
+  "/apple-icon",
+  "/pwa/icon-192",
+  "/pwa/icon-512",
+  "/pwa/icon-maskable-512",
+];
 
 const OFFLINE_PAGE = "/offline";
 
@@ -21,7 +32,16 @@ this.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(SHELL_CACHE);
-      await cache.addAll(SHELL_URLS);
+      // addAll fails as a whole if any URL 4xx/5xxs (e.g. /offline 404s in a
+      // thin dev route), so seed the common shell separately and best-effort
+      // the rest. Icons/manifest are static and always safe.
+      await cache.addAll(SHELL_URLS).catch(() => {
+        return Promise.all(
+          SHELL_URLS.map((url) =>
+            cache.add(url).catch(() => undefined),
+          ),
+        );
+      });
       await self.skipWaiting();
     })(),
   );
@@ -48,20 +68,27 @@ this.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // App pages: network first, fall back to cache (app shell / offline page).
+  // App pages: cache-first, refresh in the background. Repeat opens are
+  // instant; the first paint is the shell and data re-fetches via client JS.
   if (request.mode === "navigate") {
     event.respondWith(
       (async () => {
-        try {
-          const response = await fetch(request);
-          const cache = await caches.open(SHELL_CACHE);
-          cache.put(request, response.clone());
-          return response;
-        } catch {
-          const cached = await caches.match(request);
-          if (cached) return cached;
-          return caches.match(OFFLINE_PAGE);
+        const cache = await caches.open(SHELL_CACHE);
+        const cached = (await cache.match(request)) || (await cache.match("/"));
+        const network = fetch(request)
+          .then((response) => {
+            if (response && response.status === 200) {
+              cache.put(request, response.clone());
+            }
+            return response;
+          })
+          .catch(() => null);
+        if (cached) {
+          // Don't block the paint on a network round-trip.
+          network.then(() => {});
+          return cached;
         }
+        return network || caches.match(OFFLINE_PAGE);
       })(),
     );
     return;

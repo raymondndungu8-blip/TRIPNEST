@@ -70,10 +70,18 @@ export function CategoryBadge({ category }: { category: VehicleCategory }) {
   );
 }
 
-export function RideTypeBadge({ type }: { type: RideType }) {
+export function RideTypeBadge({
+  type,
+  passengers,
+}: {
+  type: RideType;
+  passengers?: number;
+}) {
   return (
     <Badge tone={type === "cost_sharing" ? "green" : "blue"}>
-      {type === "cost_sharing" ? "Cost sharing" : "Private"}
+      {type === "cost_sharing"
+        ? `Cost sharing${passengers && passengers > 1 ? ` · ${passengers} people` : ""}`
+        : "Private"}
     </Badge>
   );
 }

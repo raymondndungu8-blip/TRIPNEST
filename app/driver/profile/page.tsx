@@ -20,6 +20,7 @@ import {
   Car,
   MapPin,
   Hash,
+  Truck,
   FileText,
   Shield,
   Ban,
@@ -75,6 +76,9 @@ function PersonalInfoPanel({
   const [phone, setPhone] = useState(driver.phone ?? "");
   const [vehicleType, setVehicleType] = useState(driver.vehicle_type);
   const [plate, setPlate] = useState(driver.plate_number);
+  const [seats, setSeats] = useState(
+    driver.seats ? String(driver.seats) : ""
+  );
   const [current, setCurrent] = useState(driver.current_location ?? "");
   const [frequent, setFrequent] = useState(driver.frequent_location ?? "");
   const [category, setCategory] = useState<VehicleCategory>(
@@ -91,6 +95,11 @@ function PersonalInfoPanel({
       toast("Vehicle type and plate number are required", "warning");
       return;
     }
+    const seatCount = Number(seats);
+    if (!seats || !Number.isInteger(seatCount) || seatCount < 1 || seatCount > 20) {
+      toast("Seat capacity must be between 1 and 20", "warning");
+      return;
+    }
     setSaving(true);
     try {
       await patchDocument(docs.driver(driver.id), {
@@ -98,6 +107,7 @@ function PersonalInfoPanel({
         phone: phone.trim(),
         vehicleType: vehicleType.trim(),
         plateNumber: plate.trim(),
+        seats: seatCount,
         currentLocation: current.trim() || null,
         frequentLocation: frequent.trim() || null,
         vehicleCategory: category,
@@ -170,6 +180,29 @@ function PersonalInfoPanel({
               placeholder="e.g. KDA 123A"
               autoCapitalize="characters"
               maxLength={20}
+              className="pl-10"
+            />
+          </div>
+        </Field>
+
+        <Field
+          label="Seat capacity"
+          htmlFor="dp_seats"
+          hint="How many passengers can it carry?"
+        >
+          <div className="relative">
+            <Truck className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="dp_seats"
+              type="number"
+              inputMode="numeric"
+              value={seats}
+              onChange={(e) =>
+                setSeats(e.target.value.replace(/\D/g, "").slice(0, 2))
+              }
+              placeholder="e.g. 7"
+              min={1}
+              max={20}
               className="pl-10"
             />
           </div>
@@ -601,7 +634,7 @@ function ProfileScreen({ driver }: { driver: Driver }) {
         {/* Header */}
         <div className="flex flex-col items-center pt-2">
           <div className="relative">
-            <Avatar name={driver.name} size={80} />
+            <Avatar name={driver.name} src={driver.avatar_url} size={80} />
             <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-3">
               <CategoryBadge category={driver.vehicle_category} />
             </span>

@@ -80,12 +80,17 @@ export function RideCard({
         <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
           <Wallet className="h-3.5 w-3.5 text-accent" />
           {formatKES(ride.budget)}
+          {ride.ride_type === "cost_sharing" && (ride.passengers ?? 1) > 1 && (
+            <span className="font-normal text-muted-foreground">
+              · {formatKES(ride.budget / (ride.passengers ?? 1))}/person
+            </span>
+          )}
         </span>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <CategoryBadge category={ride.vehicle_category} />
-        <RideTypeBadge type={ride.ride_type} />
+        <RideTypeBadge type={ride.ride_type} passengers={ride.passengers} />
       </div>
 
       {footer && <div className="mt-4">{footer}</div>}

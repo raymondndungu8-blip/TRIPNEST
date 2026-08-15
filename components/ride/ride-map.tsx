@@ -1,61 +1,51 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MapPin, Navigation, Route as RouteIcon, Clock } from "lucide-react";
 import { geocode, getRoute, type LngLat } from "@/lib/geo";
+import { MAP_STYLE, markerEl, boundsOf } from "@/lib/map";
 import { cn } from "@/lib/utils";
 
-// Google Maps raster tiles styled dark via CSS filter.
-const GOOGLE_STYLE: import("maplibre-gl").StyleSpecification = {
-  version: 8,
-  sources: {
-    "google-maps": {
-      type: "raster",
-      tiles: [
-        "https://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt2.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt3.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-      ],
-      tileSize: 256,
-    },
-  },
-  layers: [
-    {
-      id: "google-maps-layer",
-      type: "raster",
-      source: "google-maps",
-    },
-  ],
-};
+const NAIROBI: LngLat = [36.8219, -1.2921];
 
-function dot(color: string, ring = false) {
-  const el = document.createElement("div");
-  el.style.width = "16px";
-  el.style.height = "16px";
-  el.style.borderRadius = "9999px";
-  el.style.background = color;
-  el.style.border = "3px solid #f4eddf";
-  el.style.boxShadow = `0 0 0 2px ${color}, 0 2px 8px rgba(0,0,0,0.6)`;
-  if (ring) el.style.animation = "pulse-dot 1.6s ease-in-out infinite";
-  return el;
+function pinSvg(color: string, label = "") {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="46" viewBox="0 0 34 46">
+      <path fill="${color}" stroke="#ffffff" stroke-width="2.5" d="M17 1C8.7 1 2 7.7 2 16c0 11 15 28 15 28s15-17 15-28C32 7.7 25.3 1 17 1z"/>
+      <circle cx="17" cy="16" r="7" fill="#ffffff"/>
+      ${label ? `<text x="17" y="20" text-anchor="middle" font-size="10" font-weight="700" fill="${color}" font-family="system-ui">${label}</text>` : ""}
+    </svg>`;
+  return "data:image/svg+xml," + encodeURIComponent(svg);
 }
 
-function carMarker() {
+function carSvg() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="19" fill="#E2B127" stroke="#fff" stroke-width="2"/>
+      <path d="M13 26h14l-1.4-5H14.4L13 26zM14.5 20l1-3h9l1 3" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="15" cy="26" r="2" fill="#fff"/><circle cx="25" cy="26" r="2" fill="#fff"/>
+    </svg>`;
+  return "data:image/svg+xml," + encodeURIComponent(svg);
+}
+
+function blueDotEl() {
   const el = document.createElement("div");
-  el.style.width = "30px";
-  el.style.height = "30px";
+  el.style.width = "24px";
+  el.style.height = "24px";
+  el.style.borderRadius = "50%";
+  el.style.background = "rgba(56,189,248,0.25)";
   el.style.display = "grid";
   el.style.placeItems = "center";
-  el.style.borderRadius = "9999px";
-  el.style.background = "linear-gradient(135deg,#E2B127,#DD2C11)";
-  el.style.boxShadow = "0 0 0 3px rgba(199,66,7,0.35), 0 4px 12px rgba(0,0,0,0.6)";
-  el.innerHTML =
-    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M6 17l1.5-5h9L18 17M7 12l1-3h8l1 3"/><circle cx="8" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/></svg>';
+  const dot = document.createElement("div");
+  dot.style.width = "11px";
+  dot.style.height = "11px";
+  dot.style.borderRadius = "50%";
+  dot.style.background = "#1d4ed8";
+  dot.style.border = "2px solid #ffffff";
+  dot.style.boxShadow = "0 0 0 2px rgba(56,189,248,0.35)";
+  el.appendChild(dot);
   return el;
 }
-
 
 export function RideMap({
   pickup,
@@ -70,126 +60,163 @@ export function RideMap({
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const carRef = useRef<import("maplibre-gl").Marker | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const carMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const userMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const watchIdRef = useRef<number | null>(null);
   const [info, setInfo] = useState<{ km: number; min: number } | null>(null);
   const [ready, setReady] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState("");
 
   useEffect(() => {
-    let map: import("maplibre-gl").Map | null = null;
-    let raf = 0;
     let cancelled = false;
 
-    (async () => {
-      try {
-        const maplibregl = (await import("maplibre-gl")).default;
-        if (cancelled || !containerRef.current) return;
+    async function init() {
+      const container = containerRef.current;
+      if (!container) return;
 
+      let map: maplibregl.Map;
+      try {
         map = new maplibregl.Map({
-          container: containerRef.current,
-          style: GOOGLE_STYLE,
-          center: [36.8219, -1.2921],
-          zoom: 11,
-          pitch: 0,
+          container,
+          style: MAP_STYLE as never,
+          center: { lng: NAIROBI[0], lat: NAIROBI[1] },
+          zoom: 12,
           attributionControl: { compact: true },
         });
-        const m = map;
-        m.on("error", (e) => console.warn("[ride-map] maplibre error", e?.error || e));
+      } catch {
+        if (!cancelled) setFailed("load");
+        return;
+      }
+      mapRef.current = map;
 
-        m.on("load", async () => {
-          const [a, b] = await Promise.all([geocode(pickup), geocode(destination)]);
-          if (cancelled) return;
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const onErr = () => reject(new Error("tiles"));
+          map.once("error", onErr);
+          map.once("load", () => {
+            map.off("error", onErr);
+            resolve();
+          });
+        });
+      } catch {
+        if (!cancelled) setFailed("load");
+        return;
+      }
+      if (cancelled) return;
 
-          new maplibregl.Marker({ element: dot("#dd3a41", true) }).setLngLat(a).addTo(m);
-          new maplibregl.Marker({ element: dot("#c47d09") }).setLngLat(b).addTo(m);
+      // Resolve pickup/destination to coordinates (free Nominatim geocoding).
+      const [a, b] = await Promise.all([
+        geocode(pickup.trim() || "Nairobi"),
+        geocode(destination.trim() || "Nairobi"),
+      ]);
+      if (cancelled) return;
 
-          const route = await getRoute(a, b);
-          if (cancelled) return;
-          setInfo({ km: route.distanceKm, min: route.durationMin });
+      new maplibregl.Marker({ element: markerEl(pinSvg("#38bdf8"), 26) })
+        .setLngLat({ lng: a[0], lat: a[1] })
+        .addTo(map);
 
-          const coords = route.coordinates;
-          m.addSource("tn-route", {
+      new maplibregl.Marker({ element: markerEl(pinSvg("#e11d48", "A"), 26) })
+        .setLngLat({ lng: b[0], lat: b[1] })
+        .addTo(map);
+
+      // Car marker for the driver's live position (or the simulated one).
+      const carMarker = new maplibregl.Marker({
+        element: markerEl(carSvg(), 40),
+      })
+        .setLngLat({ lng: a[0], lat: a[1] })
+        .addTo(map);
+      carMarkerRef.current = carMarker;
+
+      // Accurate road route + real distance/time (free OSRM routing).
+      try {
+        const route = await getRoute(a, b);
+        if (cancelled) return;
+        if (route.coordinates.length > 1) {
+          map.addSource("route", {
             type: "geojson",
             data: {
               type: "Feature",
               properties: {},
-              geometry: { type: "LineString", coordinates: coords },
+              geometry: {
+                type: "LineString",
+                coordinates: route.coordinates,
+              },
             },
           });
-          m.addLayer({
-            id: "tn-route-glow",
+          map.addLayer({
+            id: "route-line",
             type: "line",
-            source: "tn-route",
+            source: "route",
             layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#00d4ff", "line-width": 10, "line-opacity": 0.35 },
+            paint: {
+              "line-color": "#00d4ff",
+              "line-width": 5,
+              "line-opacity": 0.95,
+            },
           });
-          m.addLayer({
-            id: "tn-route-line",
-            type: "line",
-            source: "tn-route",
-            layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#00d4ff", "line-width": 4.5 },
-          });
-
-          // Frame the whole route. Pitch in 3D only for short (city) trips so a
-          // zoomed-out inter-city route never shows an empty/black horizon.
-          const bounds = coords.reduce(
-            (bb, c) => bb.extend(c as [number, number]),
-            new maplibregl.LngLatBounds(coords[0], coords[0])
-          );
-          const cam = m.cameraForBounds(bounds, { padding: 48, maxZoom: 15 });
-          const zoom = cam?.zoom ?? 12;
-          m.easeTo({
-            center: cam?.center,
-            zoom,
-            pitch: zoom >= 12.5 ? 55 : 0,
-            bearing: zoom >= 12.5 ? -18 : 0,
-            duration: 1100,
-          });
-          setReady(true);
-
-          if (coords.length > 1) {
-            const car = new maplibregl.Marker({ element: carMarker() })
-              .setLngLat(coords[0] as LngLat)
-              .addTo(m);
-            carRef.current = car;
-
-            // Only run the simulated trip when we have no real GPS feed.
-            if (!livePosition) {
-              let t = 0;
-              const speed = 0.02 * Math.max(1, 60 / coords.length);
-              const tick = () => {
-                t += speed;
-                if (t >= coords.length - 1) t = 0;
-                const i = Math.floor(t);
-                const f = t - i;
-                const c0 = coords[i];
-                const c1 = coords[Math.min(i + 1, coords.length - 1)];
-                car.setLngLat([c0[0] + (c1[0] - c0[0]) * f, c0[1] + (c1[1] - c0[1]) * f]);
-                raf = requestAnimationFrame(tick);
-              };
-              raf = requestAnimationFrame(tick);
-            }
+          const bbox = boundsOf(route.coordinates);
+          if (bbox) {
+            map.fitBounds(
+              [
+                [bbox.lng[0], bbox.lat[0]],
+                [bbox.lng[1], bbox.lat[1]],
+              ],
+              { padding: 56, maxZoom: 15 }
+            );
           }
-        });
-      } catch (err) {
-        console.error("[ride-map] failed to init", err);
-        if (!cancelled) setFailed(true);
+        }
+        setInfo({ km: route.distanceKm, min: route.durationMin });
+      } catch {
+        setInfo(null);
       }
-    })();
+
+      // Device (rider) GPS — live blue dot.
+      const userMarker = new maplibregl.Marker({ element: blueDotEl() })
+        .setLngLat({ lng: a[0], lat: a[1] })
+        .addTo(map);
+      userMarkerRef.current = userMarker;
+
+      if (navigator.geolocation) {
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          (pos) => {
+            userMarker.setLngLat({
+              lng: pos.coords.longitude,
+              lat: pos.coords.latitude,
+            });
+          },
+          () => undefined,
+          { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 }
+        );
+      }
+
+      setReady(true);
+    }
+
+    init();
 
     return () => {
       cancelled = true;
-      cancelAnimationFrame(raf);
-      map?.remove();
+      if (watchIdRef.current !== null)
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+      mapRef.current?.remove();
+      mapRef.current = null;
+      carMarkerRef.current = null;
+      userMarkerRef.current = null;
     };
   }, [pickup, destination]);
 
   // Move the car marker to the driver's real position as they drive.
   useEffect(() => {
-    if (!livePosition || !carRef.current) return;
-    carRef.current.setLngLat(livePosition);
+    if (!livePosition || !carMarkerRef.current) return;
+    carMarkerRef.current.setLngLat({
+      lng: livePosition[0],
+      lat: livePosition[1],
+    });
   }, [livePosition]);
+
+  const tooFewArgs = !pickup || !destination;
 
   return (
     <div
@@ -199,19 +226,11 @@ export function RideMap({
         className
       )}
     >
-      <div
-        ref={containerRef}
-        className="absolute inset-0"
-        style={{
-          width: "100%",
-          height: "100%",
-          filter: "invert(1) hue-rotate(180deg) brightness(0.95) contrast(1.2)",
-        }}
-      />
+      <div ref={containerRef} className="absolute inset-0" />
 
       <div className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2.5 py-1 text-xs font-medium text-foreground backdrop-blur">
         <span className="h-2 w-2 animate-pulse-dot rounded-full bg-success" />
-        Live tracking
+        Live GPS tracking
       </div>
 
       {info && (
@@ -235,13 +254,19 @@ export function RideMap({
         </div>
       )}
 
-      {failed && (
+      {failed === "load" && (
         <div className="absolute inset-0 z-0 grid place-items-center bg-surface px-6 text-center">
           <div className="space-y-1">
             <Navigation className="mx-auto h-5 w-5 text-accent" />
             <p className="text-sm text-foreground">{pickup} → {destination}</p>
-            <p className="text-xs text-muted-foreground">Map preview unavailable</p>
+            <p className="text-xs text-muted-foreground">Map failed to load</p>
           </div>
+        </div>
+      )}
+
+      {tooFewArgs && failed === "" && (
+        <div className="absolute inset-0 z-0 grid place-items-center bg-surface px-6 text-center">
+          <p className="text-xs text-muted-foreground">Enter a pickup and destination</p>
         </div>
       )}
     </div>

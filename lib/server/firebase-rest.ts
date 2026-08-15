@@ -1,4 +1,4 @@
-import { createPrivateKey, sign } from "node:crypto"
+import { createPrivateKey, createHash, sign } from "node:crypto"
 
 /**
  * Firebase Server access WITHOUT the Admin SDK.
@@ -6,11 +6,14 @@ import { createPrivateKey, sign } from "node:crypto"
  * The Admin SDK ships jwks-rsa -> jose (ESM-only), which Vercel serverless
  * functions reject at runtime with ERR_REQUIRE_ESM (firebase-admin is on
  * Next.js's always-external list, so it can't be bundled to fix the interop).
- * This module reproduces the two operations the push route needs using the
+ * This module reproduces the server operations the app needs using the
  * public REST endpoints + a service-account JWT minted with node:crypto:
  *
- *   1. verifyIdToken    -> Firebase Auth REST  (validates a client ID token)
- *   2. readPushSubscription -> Cloud Firestore REST (reads a subscription doc)
+ *   1. verifyIdToken          -> Firebase Auth REST  (validates a client ID token)
+ *   2. readPushSubscription   -> Cloud Firestore REST (reads a subscription doc)
+ *   3. getOrCreatePhoneUser   -> Identity Toolkit REST (driver OTP sign-in)
+ *   4. signCustomToken        -> mints a Firebase custom token for the driver
+ *   5. otp doc CRUD           -> Cloud Firestore REST (stores OTP codes hashed)
  */
 
 interface ServiceAccount {
@@ -192,4 +195,197 @@ export async function readPushSubscription(
     return null
   }
   return stored
+}
+
+// ── Raw Firestore document helpers (used for OTP codes) ───────────────────
+
+function getProjectId(): string {
+  return (
+    getServiceAccount()?.project_id ??
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ??
+    ""
+  )
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function encodeValue(value: unknown): any {
+  if (value === null || value === undefined) return { nullValue: null }
+  if (typeof value === "boolean") return { booleanValue: value }
+  if (typeof value === "number") {
+    return Number.isInteger(value)
+      ? { integerValue: String(value) }
+      : { doubleValue: value }
+  }
+  if (typeof value === "string") return { stringValue: value }
+  if (value instanceof Date) return { timestampValue: value.toISOString() }
+  if (Array.isArray(value)) {
+    return { arrayValue: { values: value.map(encodeValue) } }
+  }
+  if (typeof value === "object") {
+    const fields: Record<string, any> = {}
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      fields[k] = encodeValue(v)
+    }
+    return { mapValue: { fields } }
+  }
+  return { nullValue: null }
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+/** Read a Firestore document (path like `otpCodes/abc`), null when missing. */
+export async function getRawDocument(
+  path: string
+): Promise<Record<string, unknown> | null> {
+  const projectId = getProjectId()
+  if (!projectId) return null
+  const token = await getAccessToken()
+  if (!token) return null
+
+  const res = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(
+      projectId
+    )}/databases/(default)/documents/${path}`,
+    { headers: { authorization: `Bearer ${token}` } }
+  )
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`firestore read failed (${res.status})`)
+
+  const doc = (await res.json()) as { fields?: Record<string, any> }
+  return doc.fields
+    ? (decodeValue({ mapValue: { fields: doc.fields } }) as Record<
+        string,
+        unknown
+      >)
+    : null
+}
+
+/** Create or fully replace a Firestore document (path like `otpCodes/abc`). */
+export async function setRawDocument(
+  path: string,
+  data: Record<string, unknown>
+): Promise<void> {
+  const projectId = getProjectId()
+  if (!projectId) throw new Error("firebase project not configured")
+  const token = await getAccessToken()
+  if (!token) throw new Error("service account not configured")
+
+  const mask = Object.keys(data)
+    .map((k) => `updateMask.fieldPaths=${encodeURIComponent(k)}`)
+    .join("&")
+  const res = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(
+      projectId
+    )}/databases/(default)/documents/${path}?${mask}`,
+    {
+      method: "PATCH",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        fields: Object.fromEntries(
+          Object.entries(data).map(([k, v]) => [k, encodeValue(v)])
+        ),
+      }),
+    }
+  )
+  if (!res.ok) throw new Error(`firestore write failed (${res.status})`)
+}
+
+/** Delete a Firestore document; no-op when it doesn't exist. */
+export async function deleteRawDocument(path: string): Promise<void> {
+  const projectId = getProjectId()
+  if (!projectId) return
+  const token = await getAccessToken()
+  if (!token) return
+  await fetch(
+    `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(
+      projectId
+    )}/databases/(default)/documents/${path}`,
+    { method: "DELETE", headers: { authorization: `Bearer ${token}` } }
+  )
+}
+
+/**
+ * Mint a Firebase Auth custom token signed with the service-account key.
+ * The client exchanges it via signInWithCustomToken for a real session.
+ */
+export function signCustomToken(uid: string): string | null {
+  const sa = getServiceAccount()
+  if (!sa?.client_email || !sa?.private_key) return null
+
+  const now = Math.floor(Date.now() / 1000)
+  const header = { alg: "RS256", typ: "JWT" }
+  const claims = {
+    iss: sa.client_email,
+    sub: sa.client_email,
+    aud: "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit",
+    iat: now,
+    exp: now + 60 * 60,
+    uid,
+  }
+
+  const input = `${b64url(JSON.stringify(header))}.${b64url(
+    JSON.stringify(claims)
+  )}`
+  const key = createPrivateKey(sa.private_key)
+  const sig = sign("RSA-SHA256", Buffer.from(input), key)
+  return `${input}.${sig.toString("base64url")}`
+}
+
+/**
+ * Resolve the uid to hand the driver a custom token for.
+ *
+ * The REST `accounts:signUp` endpoint can't create a bare phone-only account
+ * (it requires reCAPTCHA-verified SMS material), so we can't pre-create one.
+ * Instead:
+ *   1. If an existing Firebase Auth account is already bound to this phone
+ *      (e.g. someone who signed up before via CE Firebase phone auth), reuse
+ *      its uid so their existing driver doc keeps working.
+ *   2. Otherwise mint a deterministic uid derived from the phone. The first
+ *      signInWithCustomToken creates the account under that uid, and the
+ *      driver doc keyed by it is stable across future logins.
+ */
+export async function getOrCreatePhoneUser(
+  phone: string
+): Promise<{ uid: string } | null> {
+  const sa = getServiceAccount()
+  const projectId = sa?.project_id
+  if (projectId) {
+    try {
+      const token = await getAccessToken()
+      const query = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/accounts:query`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${token}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ queries: [{ phoneNumber: phone }] }),
+        }
+      )
+      if (query.ok) {
+        const qdata = (await query.json()) as {
+          users?: Array<{ localId?: string; uid?: string }>
+        }
+        const existing = qdata.users?.[0]
+        const uid = existing?.localId ?? existing?.uid
+        if (uid) return { uid }
+      } else {
+        console.error(
+          "[getOrCreatePhoneUser] admin query failed",
+          query.status,
+          (await query.text().catch(() => "")).slice(0, 300)
+        )
+      }
+    } catch (err) {
+      console.error("[getOrCreatePhoneUser] admin query error", err)
+    }
+  }
+
+  const hash = createHash("sha256").update(phone).digest("hex").slice(0, 26)
+  return { uid: `phone_${hash}` }
 }

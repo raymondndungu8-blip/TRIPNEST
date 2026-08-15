@@ -18,9 +18,11 @@ import {
   fetchConversations,
   fetchMessages,
   sendMessage,
+  markConversationRead,
   type ConversationPreview,
   type Message,
 } from "@/lib/messages";
+import { UnreadBadge } from "@/components/ui/unread-badge";
 import { cn, friendlyErrorMessage } from "@/lib/utils";
 import { notifyUser } from "@/lib/notify";
 
@@ -80,6 +82,7 @@ function ChatView({
         const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Message[];
         setMessages(msgs);
         setLoading(false);
+        markConversationRead(clientId, driverId, "client");
         setTimeout(scrollToBottom, 100);
       },
       () => {
@@ -252,13 +255,16 @@ function InboxContent() {
 
   return (
     <AppShell>
-      <div className="mb-1">
-        <h1 className="font-display text-2xl font-extrabold text-foreground">
-          Inbox
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Chat with your drivers to coordinate pickups
-        </p>
+      <div className="mb-1 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-extrabold text-foreground">
+            Inbox
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Chat with your drivers to coordinate pickups
+          </p>
+        </div>
+        <UnreadBadge role="client" userId={client.id} />
       </div>
 
       <div className="mt-5">
@@ -291,6 +297,9 @@ function InboxContent() {
                       <p className="truncate font-semibold text-foreground">
                         {convo.driver_name}
                       </p>
+                      {convo.last_message && convo.unread && (
+                        <span className="ml-1 inline-block h-2 w-2 shrink-0 rounded-full bg-accent" />
+                      )}
                       {convo.last_message_at && (
                         <span className="shrink-0 text-[11px] text-muted-foreground">
                           {timeAgo(convo.last_message_at)}

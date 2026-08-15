@@ -1,0 +1,28 @@
+// Firebase Storage security rules for TripNest.
+//
+// Deploy with the Firebase CLI:
+//   firebase deploy --only storage
+// or upload the rules in Firebase Console → Storage → Rules.
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Any signed-in user may read uploaded media (avatars, vehicle shots,
+    // messages attachments, etc.).
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+    }
+
+    // Client avatars: only the owning user may write.
+    match /avatars/{userId}/{fileName} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Driver documents (profile photo, vehicle photo, licence front/back,
+    // National ID): only the owning driver may write.
+    match /drivers/{userId}/{folder}/{fileName} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

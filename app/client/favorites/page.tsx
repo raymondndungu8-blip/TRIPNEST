@@ -24,7 +24,6 @@ import {
   MessageCircle,
   ChevronDown,
   Car,
-  Wallet,
   FileText,
   Ban,
   LayoutDashboard,
@@ -35,23 +34,21 @@ import { Avatar } from "@/components/ui/avatar";
 import { AvatarCropper } from "@/components/ui/avatar-cropper";
 import { CategoryBadge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Field, Input } from "@/components/ui/field";
-import { Segmented } from "@/components/ui/segmented";
 import { StaggerList, FadeIn, fadeUp } from "@/components/motion/motion";
 import { RequireRole } from "@/components/auth/require-role";
+import { EmergencyContactField } from "@/components/client/emergency-contact-field";
+import { DriverSetupForm } from "@/components/driver/driver-setup-form";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { fetchFavoriteDrivers, removeFavorite } from "@/lib/favorites";
 import { fetchClientRides } from "@/lib/rides";
 import { uploadAvatar, updateClientAvatar } from "@/lib/storage";
-import { getDocument, setDocument, patchDocument, queryDocuments, collections, docs, where, Timestamp } from "@/lib/db";
-import { cn, formatKES, formatDateTime, friendlyErrorMessage } from "@/lib/utils";
-import { VEHICLE_CATEGORIES } from "@/lib/types";
+import { patchDocument, queryDocuments, collections, docs, where } from "@/lib/db";
+import { cn, formatKES, formatDateTime } from "@/lib/utils";
 import type {
   Client,
   Driver,
   RideWithRelations,
-  VehicleCategory,
 } from "@/lib/types";
 
 type Panel =
@@ -389,25 +386,10 @@ function SafetyPanel({
       <PanelHeader title="Safety Settings" onBack={onBack} />
       <div className="space-y-5">
         {/* Emergency contact */}
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-foreground">
-            Emergency contact
-          </label>
-          <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-2/40 px-4">
-            <Phone className="h-4 w-4 shrink-0 text-destructive" />
-            <input
-              type="tel"
-              value={emergency}
-              onChange={(e) => setEmergency(e.target.value)}
-              placeholder="+254 7XX XXX XXX"
-              className="input-transparent w-full bg-transparent py-3 text-[15px] focus:outline-none"
-            />
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            This number will be contacted in case of an emergency during your
-            ride.
-          </p>
-        </div>
+        <EmergencyContactField
+          value={emergency}
+          onChange={setEmergency}
+        />
 
         {/* Share ride details */}
         <div className="flex items-center justify-between rounded-2xl border border-border bg-surface-2/40 p-4">
@@ -603,15 +585,6 @@ function HelpPanel({ onBack }: { onBack: () => void }) {
 
 /* ── Become a Driver ──────────────────────────────────── */
 
-interface DriverForm {
-  name: string;
-  vehicle_type: string;
-  plate_number: string;
-  current_location: string;
-  frequent_location: string;
-  vehicle_category: VehicleCategory;
-}
-
 function BecomeDriverPanel({
   client,
   onBack,
@@ -623,194 +596,39 @@ function BecomeDriverPanel({
   const { user, setDriver } = useSession();
   const { toast } = useToast();
 
-  const [form, setForm] = useState<DriverForm>({
-    name: client.name,
-    vehicle_type: "",
-    plate_number: "",
-    current_location: "",
-    frequent_location: "",
-    vehicle_category: "standard",
-  });
-  const [errors, setErrors] = useState<Partial<Record<keyof DriverForm, string>>>(
-    {}
-  );
-  const [submitting, setSubmitting] = useState(false);
-
-  function update<K extends keyof DriverForm>(key: K, value: DriverForm[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
-    setErrors((e) => ({ ...e, [key]: undefined }));
-  }
-
-  function validate(): boolean {
-    const next: Partial<Record<keyof DriverForm, string>> = {};
-    if (!form.name.trim()) next.name = "Your name is required";
-    else if (form.name.trim().length > 100) next.name = "Too long (max 100)";
-    if (!form.vehicle_type.trim())
-      next.vehicle_type = "Vehicle type is required";
-    else if (form.vehicle_type.trim().length > 60)
-      next.vehicle_type = "Too long (max 60)";
-    if (!form.plate_number.trim())
-      next.plate_number = "Car plate number is required";
-    else if (form.plate_number.trim().length > 20)
-      next.plate_number = "Too long (max 20)";
-    if (!form.current_location.trim())
-      next.current_location = "Current location is required";
-    else if (form.current_location.trim().length > 200)
-      next.current_location = "Too long (max 200)";
-    if (!form.frequent_location.trim())
-      next.frequent_location = "Frequent location is required";
-    else if (form.frequent_location.trim().length > 200)
-      next.frequent_location = "Too long (max 200)";
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!validate() || !user) return;
-    setSubmitting(true);
-    try {
-      await setDocument(docs.driver(user.uid), {
-        userId: user.uid,
-        name: form.name.trim(),
-        phone: client.phone ?? "",
-        vehicleType: form.vehicle_type.trim(),
-        plateNumber: form.plate_number.trim(),
-        currentLocation: form.current_location.trim(),
-        frequentLocation: form.frequent_location.trim(),
-        vehicleCategory: form.vehicle_category,
-        isAvailable: false,
-        createdAt: Timestamp.now(),
-      });
-      const data = await getDocument<Driver>(docs.driver(user.uid));
-      if (!data) throw new Error("Could not create driver profile");
-      setDriver(data);
-      toast("You're now a TripNest driver!", "success");
-      router.push("/driver");
-    } catch (err) {
-      console.error("[become driver] failed", err);
-      toast(
-        friendlyErrorMessage(
-          err,
-          "Could not set up your driver profile. Please try again."
-        ),
-        "error"
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
     <>
       <PanelHeader title="Become a Driver" onBack={onBack} />
 
       <div className="mb-5 rounded-2xl border border-accent/25 bg-accent/5 p-4">
         <div className="flex items-center gap-2 text-accent">
-          <Wallet className="h-4 w-4" />
+          <Car className="h-4 w-4" />
           <p className="text-sm font-semibold">Earn with your car</p>
         </div>
         <p className="mt-1.5 text-xs text-muted-foreground">
           Keep your rider account and start accepting ride requests to make extra
-          income. You can switch between rider and driver mode anytime.
+          income. You can switch between rider and driver mode anytime. You'll
+          need scans of your driving licence and National ID.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <Field label="Full name" htmlFor="d_name" required error={errors.name}>
-          <Input
-            id="d_name"
-            autoComplete="name"
-            value={form.name}
-            invalid={!!errors.name}
-            onChange={(e) => update("name", e.target.value)}
-          />
-        </Field>
-
-        <Field
-          label="Vehicle type"
-          htmlFor="d_vehicle_type"
-          required
-          error={errors.vehicle_type}
-          hint="Make and model of your car"
-        >
-          <Input
-            id="d_vehicle_type"
-            placeholder="e.g. Toyota Noah"
-            value={form.vehicle_type}
-            invalid={!!errors.vehicle_type}
-            onChange={(e) => update("vehicle_type", e.target.value)}
-          />
-        </Field>
-
-        <Field
-          label="Car plate number"
-          htmlFor="d_plate_number"
-          required
-          error={errors.plate_number}
-        >
-          <Input
-            id="d_plate_number"
-            autoCapitalize="characters"
-            placeholder="e.g. KDA 123A"
-            value={form.plate_number}
-            invalid={!!errors.plate_number}
-            onChange={(e) => update("plate_number", e.target.value)}
-          />
-        </Field>
-
-        <Field
-          label="Current location"
-          htmlFor="d_current_location"
-          required
-          error={errors.current_location}
-        >
-          <Input
-            id="d_current_location"
-            placeholder="e.g. Westlands, Nairobi"
-            value={form.current_location}
-            invalid={!!errors.current_location}
-            onChange={(e) => update("current_location", e.target.value)}
-          />
-        </Field>
-
-        <Field
-          label="Frequent operating location"
-          htmlFor="d_frequent_location"
-          required
-          error={errors.frequent_location}
-          hint="Where you usually pick up riders"
-        >
-          <Input
-            id="d_frequent_location"
-            placeholder="e.g. CBD / JKIA"
-            value={form.frequent_location}
-            invalid={!!errors.frequent_location}
-            onChange={(e) => update("frequent_location", e.target.value)}
-          />
-        </Field>
-
-        <Field label="Vehicle category" required>
-          <Segmented
-            name="d_vehicle_category"
-            columns={3}
-            value={form.vehicle_category}
-            onChange={(v) => update("vehicle_category", v)}
-            options={VEHICLE_CATEGORIES}
-          />
-        </Field>
-
-        <Button
-          type="submit"
-          size="lg"
-          fullWidth
-          loading={submitting}
-          className="mt-2"
-        >
-          <Car className="h-5 w-5" />
-          Create driver profile
-        </Button>
-      </form>
+      {!user ? (
+        <p className="text-center text-sm text-muted-foreground">
+          You need to be signed in to become a driver.
+        </p>
+      ) : (
+        <DriverSetupForm
+          user={user}
+          initialName={client.name}
+          phone={client.phone}
+          submitLabel="Create driver profile"
+          onCreated={(d) => {
+            setDriver(d);
+            toast("You're now a TripNest driver!", "success");
+            router.push("/driver");
+          }}
+        />
+      )}
     </>
   );
 }

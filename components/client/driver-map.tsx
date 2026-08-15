@@ -1,39 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MapPin, CarFront, Radar } from "lucide-react";
 import { useNearbyDrivers } from "@/hooks/use-rides";
 import { geocode, haversineKm, type LngLat } from "@/lib/geo";
 import { isPositionFresh } from "@/lib/location";
+import { MAP_STYLE, markerEl, boundsOf } from "@/lib/map";
 import { cn } from "@/lib/utils";
 import type { Client, Driver, VehicleCategory } from "@/lib/types";
+
+type Gmaps = any;
 
 // A driver is considered "nearby" within this radius of the client.
 const RADIUS_KM = 10;
 const NAIROBI: LngLat = [36.8219, -1.2921];
-
-// Google Maps raster tiles (same source the ride map uses). We dark-theme only
-// the tile canvas via a CSS filter so the driver markers keep true colours.
-const GOOGLE_STYLE: import("maplibre-gl").StyleSpecification = {
-  version: 8,
-  sources: {
-    "google-maps": {
-      type: "raster",
-      tiles: [
-        "https://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt2.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "https://mt3.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-      ],
-      tileSize: 256,
-    },
-  },
-  layers: [{ id: "google-maps-layer", type: "raster", source: "google-maps" }],
-};
-
-const CANVAS_FILTER =
-  "invert(1) hue-rotate(180deg) brightness(0.95) contrast(1.2)";
 
 // Cache text→coord lookups so we don't re-geocode the same town repeatedly.
 const geoCache = new Map<string, LngLat>();
@@ -48,7 +30,6 @@ function jitter(id: string): [number, number] {
 }
 
 async function geocodeDriver(driver: Driver): Promise<LngLat | null> {
-  // Real-time GPS takes priority — use it as-is when the ping is fresh.
   if (
     driver.lat != null &&
     driver.lng != null &&
@@ -68,75 +49,25 @@ async function geocodeDriver(driver: Driver): Promise<LngLat | null> {
   return [base[0] + dx, base[1] + dy];
 }
 
-function driverMarkerEl(online: boolean, distanceKm: number): HTMLDivElement {
-  const el = document.createElement("div");
-  el.style.display = "flex";
-  el.style.alignItems = "center";
-  el.style.gap = "6px";
-  el.style.cursor = "pointer";
-  el.style.filter = online ? "none" : "saturate(0.7)";
-  el.innerHTML = `
-    <span style="
-      width:32px;
-      height:32px;
-      display:grid;
-      place-items:center;
-      border-radius:9999px;
-      background:${online ? "linear-gradient(135deg,#22c55e,#15803d)" : "linear-gradient(135deg,#64748b,#334155)"};
-      box-shadow:${online ? "0 0 0 4px rgba(34,197,94,0.28), 0 8px 18px rgba(0,0,0,0.65)" : "0 0 0 4px rgba(100,116,139,0.26), 0 8px 18px rgba(0,0,0,0.55)"};
-      ${online ? "animation:pulse-dot 1.8s ease-in-out infinite;" : "opacity:.86;"}
-    ">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M6 17l1.5-5h9L18 17M7 12l1-3h8l1 3"/><circle cx="8" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/></svg>
-    </span>
-    <span style="
-      white-space:nowrap;
-      border-radius:9999px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(2,6,23,.78);
-      color:${online ? "#eaffff" : "#cbd5e1"};
-      padding:5px 8px;
-      font:700 11px system-ui,sans-serif;
-      letter-spacing:.01em;
-      box-shadow:0 8px 22px rgba(0,0,0,.45);
-      backdrop-filter:blur(10px);
-    ">${distanceKm.toFixed(1)} km</span>
-  `;
-  return el;
+function driverSvg(online: boolean, distanceKm: number) {
+  const body = online ? "#22c55e" : "#64748b";
+  const ring = online ? "rgba(34,197,94,0.35)" : "rgba(100,116,139,0.3)";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 46 46">
+      <circle cx="23" cy="23" r="21" fill="${body}" stroke="#ffffff" stroke-width="2"/>
+      <circle cx="23" cy="23" r="25" fill="none" stroke="${ring}" stroke-width="4"/>
+      <path d="M17 28h12l-1-5H18l-1 5zM18.5 22l1-2.6h7l1 2.6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="19" cy="28" r="1.8" fill="#fff"/><circle cx="27" cy="28" r="1.8" fill="#fff"/>
+      <text x="23" y="40" text-anchor="middle" font-size="7.5" font-weight="700" fill="#fff" font-family="system-ui">${distanceKm.toFixed(1)}km</text>
+    </svg>`;
+  return "data:image/svg+xml," + encodeURIComponent(svg);
 }
 
-function clientMarkerEl(): HTMLDivElement {
-  const el = document.createElement("div");
-  el.style.width = "18px";
-  el.style.height = "18px";
-  el.style.borderRadius = "9999px";
-  el.style.background = "#38bdf8";
-  el.style.border = "3px solid #ffffff";
-  el.style.boxShadow =
-    "0 0 0 6px rgba(56,189,248,0.25), 0 2px 8px rgba(0,0,0,0.6)";
-  el.style.animation = "pulse-dot 2s ease-in-out infinite";
-  return el;
-}
-
-function popupHtml(driver: Driver, distanceKm: number): string {
-  const online = driver.is_available;
-  const status = online ? "Online now" : "Offline";
-  const color = online ? "#16a34a" : "#64748b";
-  const safe = (s: string) =>
-    s.replace(/[&<>"]/g, (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string
-    );
-  return `
-    <div style="font-family:system-ui,sans-serif;min-width:150px;line-height:1.3">
-      <div style="font-weight:700;font-size:13px;color:#0f172a">${safe(
-        driver.name
-      )}</div>
-      <div style="font-size:12px;color:#475569">${safe(
-        driver.vehicle_type
-      )} · ${safe(driver.plate_number)}</div>
-      <div style="margin-top:4px;font-size:12px;font-weight:600;color:${color}">
-        ● ${status} · ${distanceKm.toFixed(1)} km away
-      </div>
-    </div>`;
+function clientSvg() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+      <circle cx="15" cy="15" r="14" fill="#38bdf8" fill-opacity="0.28"/>
+      <circle cx="15" cy="15" r="6" fill="#38bdf8" stroke="#ffffff" stroke-width="2"/>
+    </svg>`;
+  return "data:image/svg+xml," + encodeURIComponent(svg);
 }
 
 interface Point {
@@ -158,8 +89,9 @@ export function DriverMap({
 }) {
   const { drivers } = useNearbyDrivers(client.id, category);
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<import("maplibre-gl").Map | null>(null);
-  const markersRef = useRef<import("maplibre-gl").Marker[]>([]);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markersRef = useRef<maplibregl.Marker[]>([]);
+  const popupRef = useRef<maplibregl.Popup | null>(null);
 
   const [center, setCenter] = useState<LngLat | null>(null);
   const [points, setPoints] = useState<Point[]>([]);
@@ -183,39 +115,34 @@ export function DriverMap({
   // Initialise the map once.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const maplibregl = (await import("maplibre-gl")).default;
-        if (cancelled || !containerRef.current) return;
-        const map = new maplibregl.Map({
-          container: containerRef.current,
-          style: GOOGLE_STYLE,
-          center: NAIROBI,
-          zoom: 11,
-          attributionControl: { compact: true },
-        });
-        mapRef.current = map;
-        map.on("error", (e) =>
-          console.warn("[driver-map] maplibre error", e?.error || e)
-        );
-        map.on("load", () => {
-          if (cancelled) return;
-          map.getCanvas().style.filter = CANVAS_FILTER;
-          setReady(true);
-        });
-      } catch (err) {
-        console.error("[driver-map] init failed", err);
-        if (!cancelled) setFailed(true);
-      }
-    })();
+    const container = containerRef.current;
+    if (!container) return;
+
+    const map = new maplibregl.Map({
+      container,
+      style: MAP_STYLE as never,
+      center: { lng: NAIROBI[0], lat: NAIROBI[1] },
+      zoom: 11,
+      attributionControl: { compact: true },
+    });
+    mapRef.current = map;
+
+    map.once("load", () => {
+      if (!cancelled) setReady(true);
+    });
+
     return () => {
       cancelled = true;
+      popupRef.current?.remove();
+      popupRef.current = null;
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
       mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
 
-  // Geocode drivers whenever the list or centre changes.
+  // Resolve driver coords whenever the list or centre changes.
   useEffect(() => {
     if (!center) return;
     let cancelled = false;
@@ -239,50 +166,72 @@ export function DriverMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !center) return;
-    let cancelled = false;
-    (async () => {
-      const maplibregl = (await import("maplibre-gl")).default;
-      if (cancelled) return;
 
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
+    // Clear old markers + any open popup.
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+    popupRef.current?.remove();
+    popupRef.current = null;
 
-      const clientMarker = new maplibregl.Marker({ element: clientMarkerEl() })
-        .setLngLat(center)
+    new maplibregl.Marker({ element: markerEl(clientSvg(), 30) })
+      .setLngLat({ lng: center[0], lat: center[1] })
+      .addTo(map)
+      .getElement();
+
+    for (const p of points) {
+      const el = markerEl(driverSvg(p.driver.is_available, p.distanceKm), 46);
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat({ lng: p.coord[0], lat: p.coord[1] })
         .addTo(map);
-      markersRef.current.push(clientMarker);
-
-      for (const p of points) {
-        const popup = new maplibregl.Popup({
-          offset: 18,
+      el.style.cursor = "pointer";
+      el.addEventListener("click", () => {
+        const status = p.driver.is_available ? "Online now" : "Offline";
+        const color = p.driver.is_available ? "#16a34a" : "#64748b";
+        const safe = (s: string) =>
+          s.replace(/[&<>"]/g, (c) =>
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string
+          );
+        popupRef.current?.remove();
+        popupRef.current = new maplibregl.Popup({
+          offset: 26,
           closeButton: false,
-        }).setHTML(popupHtml(p.driver, p.distanceKm));
-        const marker = new maplibregl.Marker({
-          element: driverMarkerEl(p.driver.is_available, p.distanceKm),
         })
-          .setLngLat(p.coord)
-          .setPopup(popup)
+          .setLngLat({ lng: p.coord[0], lat: p.coord[1] })
+          .setHTML(
+            `<div style="font-family:system-ui,sans-serif;min-width:150px;line-height:1.35;color:#0f172a">
+              <div style="font-weight:800;font-size:13px">${safe(p.driver.name)}</div>
+              <div style="font-size:12px;color:#475569">${safe(
+                p.driver.vehicle_type
+              )} · ${safe(p.driver.plate_number)}</div>
+              <div style="margin-top:5px;font-size:12px;font-weight:700;color:${color}">
+                ● ${status} · ${p.distanceKm.toFixed(1)} km away
+              </div>
+            </div>`
+          )
           .addTo(map);
-        markersRef.current.push(marker);
-      }
+      });
+      markersRef.current.push(marker);
+    }
 
-      const near = points.filter(
-        (p) => p.driver.is_available && p.distanceKm <= RADIUS_KM
-      );
-      const frame: LngLat[] = [center, ...near.map((p) => p.coord)];
-      if (frame.length > 1) {
-        const bounds = frame.reduce(
-          (bb, c) => bb.extend(c),
-          new maplibregl.LngLatBounds(frame[0], frame[0])
+    const near = points.filter(
+      (p) => p.driver.is_available && p.distanceKm <= RADIUS_KM
+    );
+    const frame: LngLat[] = [center, ...near.map((p) => p.coord)];
+    if (frame.length > 1) {
+      const bbox = boundsOf(frame);
+      if (bbox) {
+        map.fitBounds(
+          [
+            [bbox.lng[0], bbox.lat[0]],
+            [bbox.lng[1], bbox.lat[1]],
+          ],
+          { padding: 64, maxZoom: 13 }
         );
-        map.fitBounds(bounds, { padding: 64, maxZoom: 13, duration: 700 });
-      } else {
-        map.easeTo({ center, zoom: 12, duration: 500 });
+        return;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    }
+    map.setCenter({ lng: center[0], lat: center[1] });
+    map.setZoom(12);
   }, [points, ready, center]);
 
   const stats = useMemo(() => {

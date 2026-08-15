@@ -1,4 +1,11 @@
-import { docs, collections, queryDocuments, getDocument, createDocument } from "./db"
+import {
+  docs,
+  collections,
+  queryDocuments,
+  getDocument,
+  createDocument,
+  patchDocument,
+} from "./db"
 import { where, orderBy, limit } from "firebase/firestore"
 
 export interface Message {
@@ -8,6 +15,12 @@ export interface Message {
   senderType: "client" | "driver"
   content: string
   createdAt: string
+  /**
+   * Whether the RECIPIENT has seen this message. Senders write `false`
+   * (recipient hasn't read it yet); it flips to `true` when the recipient
+   * opens the conversation. Missing on legacy docs is treated as "read".
+   */
+  read?: boolean
 }
 
 export interface ConversationPreview {
@@ -27,6 +40,7 @@ export interface DriverConversationPreview {
   is_favorite: boolean
   last_message: string
   last_message_at: string
+  unread: boolean
 }
 
 export async function fetchConversations(
@@ -80,7 +94,7 @@ export async function fetchConversations(
       driver_plate: info.plate,
       last_message: last?.content ?? "",
       last_message_at: last?.createdAt ?? "",
-      unread: false,
+      unread: last ? last.senderType === "driver" && last.read !== true : false,
     })
   }
 
@@ -149,6 +163,7 @@ export async function fetchDriverConversations(
       is_favorite: favoriteIds.has(clientId),
       last_message: last?.content ?? "",
       last_message_at: last?.createdAt ?? "",
+      unread: last ? last.senderType === "client" && last.read !== true : false,
     })
   }
 
@@ -189,7 +204,36 @@ export async function sendMessage(
     senderType,
     content: content.trim(),
     createdAt: new Date().toISOString(),
+    read: false,
   }
   const id = await createDocument(collections.messages(), data)
   return { id, ...data }
+}
+
+/**
+ * Mark every message in a conversation as read from the viewer's side.
+ * Only messages SENT to the viewer (i.e. from the other party) that are not
+ * yet read get touched, so re-running this is cheap.
+ */
+export async function markConversationRead(
+  clientId: string,
+  driverId: string,
+  viewerRole: "client" | "driver"
+): Promise<void> {
+  const other = viewerRole === "client" ? "driver" : "client"
+  try {
+    const incoming = await queryDocuments<Message>(
+      collections.messages(),
+      where("clientId", "==", clientId),
+      where("driverId", "==", driverId),
+      where("senderType", "==", other)
+    )
+    await Promise.all(
+      incoming
+        .filter((m) => m.read !== true)
+        .map((m) => patchDocument(docs.message(m.id), { read: true }))
+    )
+  } catch {
+    // Non-fatal: reading the thread still works; unread markers just persist.
+  }
 }

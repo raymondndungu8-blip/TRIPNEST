@@ -24,6 +24,7 @@ export interface CreateRideInput {
   vehicleCategory: VehicleCategory
   rideType: RideType
   budget: number
+  passengers?: number
   eventId?: string | null
   pickupLat?: number | null
   pickupLng?: number | null
@@ -49,6 +50,7 @@ function toRide(data: Record<string, unknown>): Ride {
     created_at: data.createdAt as string,
     pickup_lat: (data.pickupLat as number) ?? null,
     pickup_lng: (data.pickupLng as number) ?? null,
+    passengers: (data.passengers as number) ?? 1,
   }
 }
 
@@ -67,12 +69,15 @@ export function toClient(data: Record<string, unknown>): Client {
   }
 }
 
-function toDriver(data: Record<string, unknown>): Driver {
+export function toDriver(data: Record<string, unknown>): Driver {
   return {
     id: data.id as string,
     name: data.name as string,
     phone: data.phone as string,
+    avatar_url: (data.avatarUrl as string) ?? null,
     vehicle_type: data.vehicleType as string,
+    seats: (data.seats as number) ?? 0,
+    vehicle_image_url: (data.vehicleImageUrl as string) ?? null,
     plate_number: data.plateNumber as string,
     current_location: (data.currentLocation as string) ?? null,
     frequent_location: (data.frequentLocation as string) ?? null,
@@ -80,6 +85,13 @@ function toDriver(data: Record<string, unknown>): Driver {
     is_available: data.isAvailable as boolean,
     rating_avg: (data.ratingAvg as number) ?? null,
     rating_count: (data.ratingCount as number) ?? 0,
+    license_front_url: (data.licenseFrontUrl as string) ?? null,
+    license_back_url: (data.licenseBackUrl as string) ?? null,
+    national_id_url: (data.nationalIdUrl as string) ?? null,
+    documents_submitted:
+      typeof data.documentsSubmitted === "boolean"
+        ? data.documentsSubmitted
+        : !!(data.licenseFrontUrl && data.licenseBackUrl && data.nationalIdUrl),
     lng: (data.lng as number) ?? null,
     lat: (data.lat as number) ?? null,
     last_ping_at: (data.lastPingAt as string) ?? null,
@@ -150,7 +162,15 @@ async function populateRideRelations(
 }
 
 export async function createRide(input: CreateRideInput): Promise<Ride> {
-  const data = { ...input, status: "requested", createdAt: new Date().toISOString() }
+  // 4-digit ride verification code — generated here so it's never empty and
+  // the client can prove pickup by sharing it with the driver.
+  const verificationCode = String(Math.floor(1000 + Math.random() * 9000))
+  const data = {
+    ...input,
+    status: "requested",
+    verificationCode,
+    createdAt: new Date().toISOString(),
+  }
   const id = await createDocument(collections.rides(), data)
   return toRide({ id, ...data })
 }
@@ -162,6 +182,9 @@ export async function sendRideCodeWhatsApp(
   destination: string
 ): Promise<void> {
   const baseUrl = process.env.NEXT_PUBLIC_FUNCTIONS_URL ?? process.env.VITE_FUNCTIONS_URL ?? ""
+  // No external WhatsApp function configured — the code is still shown
+  // in-app, so silently skip rather than throw on a bogus relative URL.
+  if (!baseUrl) return
   const res = await fetch(`${baseUrl}/send-ride-code`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
