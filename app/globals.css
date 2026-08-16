@@ -4,21 +4,28 @@
 
 :root {
   color-scheme: dark;
-  --background: #060a13;
-  --surface: #0c1222;
+  --background: #050910;
+  --surface: #0b1324;
   --surface-2: #111c2e;
-  --foreground: #f0f6fc;
-  --muted: #1c2942;
-  --muted-foreground: #7a8ba3;
-  --border: rgba(0, 212, 255, 0.08);
+  --foreground: #f2f7fe;
+  --muted: #1d2b46;
+  --muted-foreground: #8a9db9;
+  --border: rgba(147, 186, 255, 0.1);
   --primary: #00d4ff;
-  --primary-foreground: #ffffff;
+  --primary-foreground: #04121d;
   --primary-soft: rgba(0, 212, 255, 0.12);
   --accent: #00d4ff;
   --success: #10b981;
+  --success-soft: rgba(16, 185, 129, 0.13);
+  --verified: #34d399;
   --warning: #f59e0b;
   --destructive: #ef4444;
-  --ring: #00d4ff;
+  --ring: #22d3ee;
+}
+
+::selection {
+  background: rgba(0, 212, 255, 0.28);
+  color: #ffffff;
 }
 
 * {
@@ -32,20 +39,36 @@ html {
 body {
   background-color: var(--background);
   color: var(--foreground);
-  background-image: var(--brand-radial),
-    radial-gradient(900px 500px at 100% 100%, rgba(0, 212, 255, 0.08), transparent 55%);
+  background-image:
+    radial-gradient(1100px 520px at 50% -8%, rgba(29, 78, 216, 0.16), transparent 60%),
+    radial-gradient(700px 420px at 100% 100%, rgba(0, 212, 255, 0.07), transparent 55%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  font-size: 16px;
+  line-height: 1.5;
   min-height: 100dvh;
+}
+
+/* Editorially-balanced headline wrapping; normalized because the app mixes
+   h1-h3 as both page titles and card headings. */
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 @layer components {
   .glass {
     background: linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.06),
-      rgba(255, 255, 255, 0.02)
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.015)
     );
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -56,7 +79,7 @@ body {
     background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
     border: 1px solid var(--border);
     border-radius: 1.25rem;
-    box-shadow: var(--shadow-card, 0 8px 30px -12px rgba(0, 0, 0, 0.6));
+    box-shadow: var(--shadow-card, 0 10px 32px -14px rgba(2, 6, 18, 0.85));
   }
 
   .text-gradient {
@@ -64,6 +87,35 @@ body {
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+  }
+
+  /* Small live status dot (online / verified / pulse) */
+  .status-dot {
+    position: relative;
+    flex: 0 0 auto;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+  }
+  .status-dot::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 9999px;
+    border: 1px solid currentColor;
+    opacity: 0.35;
+    animation: statusDotPing 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  @keyframes statusDotPing {
+    0% {
+      transform: scale(0.6);
+      opacity: 0.45;
+    }
+    70%,
+    100% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
   }
 }
 
@@ -77,32 +129,35 @@ body {
 }
 
 /* Keep browser-autofilled inputs on-theme — Chrome/Safari otherwise paint the
-   field white, hiding the light text (white-on-white). */
+   field white and swap in their own text color. Paint the fill with our surface
+   color so text stays readable on the dark UI. */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active,
 textarea:-webkit-autofill,
 select:-webkit-autofill {
-  -webkit-text-fill-color: #0f172a !important;
-  caret-color: #0f172a;
-  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
-  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+  caret-color: var(--foreground);
+  -webkit-box-shadow: 0 0 0 1000px #111c2e inset !important;
+  box-shadow: 0 0 0 1000px #111c2e inset !important;
+  border: 1px solid rgba(147, 186, 255, 0.18) !important;
+  border-radius: 0.75rem;
   transition: background-color 9999s ease-in-out 0s;
 }
 
-/* Belt-and-braces: typed text in form fields is always solid dark on the
-   light field background. */
+/* Belt-and-braces: typed text in form fields is always light on the dark
+   field background. */
 input,
 textarea,
 select {
-  color: #0f172a !important;
-  -webkit-text-fill-color: #0f172a !important;
+  color: var(--foreground) !important;
+  -webkit-text-fill-color: var(--foreground) !important;
 }
 input::placeholder,
 textarea::placeholder {
-  color: #94a3b8 !important;
-  -webkit-text-fill-color: #94a3b8 !important;
+  color: var(--muted-foreground) !important;
+  -webkit-text-fill-color: var(--muted-foreground) !important;
   opacity: 1;
 }
 
@@ -114,6 +169,26 @@ textarea::placeholder {
 .input-transparent::placeholder {
   color: var(--muted-foreground) !important;
   -webkit-text-fill-color: var(--muted-foreground) !important;
+}
+
+/* Slim, on-theme scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(147, 186, 255, 0.22) transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(147, 186, 255, 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(147, 186, 255, 0.34);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -135,7 +210,7 @@ textarea::placeholder {
   height: 100dvh;
   overflow: hidden;
   z-index: 0;
-  background: #060a13;
+  background: #050910;
 }
 
 .slide {
@@ -176,7 +251,7 @@ textarea::placeholder {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  font-family: var(--font-sora), sans-serif;
+  font-family: var(--font-manrope), var(--font-inter), sans-serif;
   transform: translateY(12px);
   opacity: 0;
   transition: transform 480ms cubic-bezier(0.23, 1, 0.32, 1), opacity 480ms ease-out;

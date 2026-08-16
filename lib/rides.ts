@@ -269,6 +269,18 @@ export async function fetchClientRides(
   return populateRideRelations(raw)
 }
 
+/**
+ * Open ride requests auto-expire after this long if no driver claims them.
+ * A sweeper on the driver dashboard cancels stale ones; the feed also drops
+ * anything older than this so nobody accepts a dead request.
+ */
+export const REQUEST_TTL_SECONDS = 60
+
+function isFutureScheduled(ride: Ride): boolean {
+  if (!ride.scheduled_at) return false
+  return new Date(ride.scheduled_at).getTime() > Date.now()
+}
+
 export async function fetchOpenRequests(
   driverId: string
 ): Promise<RideWithRelations[]> {
@@ -287,9 +299,16 @@ export async function fetchOpenRequests(
     where("status", "==", "requested"),
     orderBy("createdAt", "desc")
   )
+  const now = Date.now()
   const unclaimed = raw.filter((r) => !r.driverId)
   const rides = await populateRideRelations(unclaimed)
-  const open = rides.filter((r) => !(r.rejected_by ?? []).includes(driverId))
+  // Instant feed only: exclude future-dated bookings (they go to the
+  // "Scheduled pickups" queue) and requests that have already expired.
+  const open = rides.filter((r) => {
+    if ((r.rejected_by ?? []).includes(driverId)) return false
+    if (isFutureScheduled(r)) return false
+    return now - new Date(r.created_at).getTime() <= REQUEST_TTL_SECONDS * 1000
+  })
 
   if (!driverPos) return open
 
@@ -318,4 +337,57 @@ export async function fetchDriverRides(
     orderBy("createdAt", "desc")
   )
   return populateRideRelations(raw)
+}
+
+/**
+ * Future-dated ride requests available to a driver, sorted by soonest pickup.
+ * Unlike the instant feed these don't expire — the client booked ahead and the
+ * driver can accept whenever works. Only surfaced to available drivers.
+ */
+export async function fetchScheduledRequests(
+  driverId: string
+): Promise<RideWithRelations[]> {
+  const raw = await queryDocuments<Record<string, unknown>>(
+    collections.rides(),
+    where("status", "==", "requested"),
+    orderBy("createdAt", "desc")
+  )
+  const unclaimed = raw.filter((r) => !r.driverId)
+  const rides = await populateRideRelations(unclaimed)
+  const open = rides.filter(
+    (r) =>
+      isFutureScheduled(r) && !(r.rejected_by ?? []).includes(driverId)
+  )
+  return open.sort(
+    (a, b) =>
+      new Date(a.scheduled_at ?? 0).getTime() -
+      new Date(b.scheduled_at ?? 0).getTime()
+  )
+}
+
+/**
+ * Expire a ride request that has been waiting too long. Only a ride still in
+ * `requested` with no assigned driver can be expired, so a late accept can
+ * never be silently dropped. Returns true when this call performed the expiry.
+ */
+export async function expireRideRequest(
+  rideId: string
+): Promise<boolean> {
+  try {
+    await runTransaction(db, async (transaction) => {
+      const ref = docs.ride(rideId)
+      const snap = await transaction.get(ref)
+      if (!snap.exists()) throw new Error("not_found")
+      const data = snap.data()
+      if (data.status !== "requested" || data.driverId) {
+        throw new Error("already_taken")
+      }
+      transaction.update(ref, { status: "cancelled", cancelledReason: "expired" })
+    })
+    return true
+  } catch (err: unknown) {
+    const e = err as { message?: string }
+    if (e?.message === "not_found" || e?.message === "already_taken") return false
+    throw err
+  }
 }

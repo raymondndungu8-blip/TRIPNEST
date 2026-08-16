@@ -11,7 +11,7 @@ export function SectionTitle({
 }) {
   return (
     <div className={cn("mb-3 mt-6 flex items-center justify-between", className)}>
-      <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+      <h2 className="text-sm font-semibold uppercase tracking-label text-muted-foreground">
         {children}
       </h2>
       {action}

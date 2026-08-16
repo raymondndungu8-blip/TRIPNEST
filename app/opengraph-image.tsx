@@ -8,16 +8,16 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 async function loadFonts() {
-  const [sora, inter] = await Promise.all([
+  const [manrope, inter] = await Promise.all([
     fetch(
-      "https://cdn.jsdelivr.net/npm/@fontsource/sora@5/files/sora-latin-700-normal.woff"
+      "https://cdn.jsdelivr.net/npm/@fontsource/manrope@5/files/manrope-latin-700-normal.woff"
     ).then((r) => r.arrayBuffer()),
     fetch(
       "https://cdn.jsdelivr.net/npm/@fontsource/inter@5/files/inter-latin-500-normal.woff"
     ).then((r) => r.arrayBuffer()),
   ]);
   return [
-    { name: "Sora", data: sora, weight: 700 as const, style: "normal" as const },
+    { name: "Manrope", data: manrope, weight: 700 as const, style: "normal" as const },
     { name: "Inter", data: inter, weight: 500 as const, style: "normal" as const },
   ];
 }
@@ -59,7 +59,7 @@ export default async function OgImage() {
             style={{
               display: "flex",
               marginTop: 24,
-              fontFamily: "Sora",
+              fontFamily: "Manrope",
               fontSize: 78,
               fontWeight: 700,
               letterSpacing: 9,

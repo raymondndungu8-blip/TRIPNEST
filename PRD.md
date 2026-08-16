@@ -355,14 +355,14 @@ payments
 | Payments | M-Pesa Daraja STK Push (Safaricom Kenya) |
 | Messaging | Twilio WhatsApp API / Africa's Talking SMS |
 | Hosting | Vercel (auto-deploys from CLI) |
-| Fonts | Inter (body) + Sora (display headings) |
+| Fonts | Inter (body) + Manrope (display headings) |
 
 ---
 
 ## 8. Design system
 
 - **Colour:** Dark navy backgrounds (`#060a13` / `#0c1222`), cyan accent `#00d4ff`
-- **Typography:** Sora for headings (display), Inter for body text
+- **Typography:** Manrope for headings (display), Inter for body text
 - **Cards:** glass-morphism surfaces, `1.25rem` border radius, subtle cyan border tint
 - **Motion:** spring physics transitions (stiffness 120–350, damping 16–30)
 - **Mobile-first:** 375px baseline, max-width 448px container, 44px touch targets

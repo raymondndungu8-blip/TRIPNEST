@@ -44,8 +44,8 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto max-w-md px-3 pb-2">
-        <div className="flex items-center justify-around rounded-2xl border border-white/10 bg-[#111a2b]/82 px-1.5 py-1.5 shadow-[0_18px_55px_rgba(0,0,0,0.52)] backdrop-blur-xl">
+      <div className="mx-auto max-w-md px-4 pb-3">
+        <div className="flex items-center justify-around rounded-2xl border border-border bg-[#0d1626]/90 px-1.5 py-1.5 shadow-nav backdrop-blur-xl">
           {tabs.map((tab) => {
             const active =
               pathname === tab.href ||
@@ -58,14 +58,14 @@ export function BottomNav() {
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "relative flex min-w-[52px] flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5 text-[10px] font-medium transition-colors",
+                  "relative flex min-w-[54px] flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5 text-[10px] font-semibold tracking-tight transition-colors",
                   active ? "text-accent" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {active && (
                   <motion.span
                     layoutId="nav-active"
-                    className="absolute inset-0 -z-10 rounded-xl bg-accent/18 shadow-[0_10px_28px_rgba(0,212,255,0.22)]"
+                    className="absolute inset-0 -z-10 rounded-xl bg-accent/16 shadow-[0_8px_24px_rgba(0,212,255,0.18)]"
                     transition={{ type: "spring", stiffness: 350, damping: 30 }}
                   />
                 )}

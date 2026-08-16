@@ -1018,7 +1018,7 @@ function SetupScreen() {
         <div className="mt-6">
           <div className="mb-3 flex items-center gap-2">
             <Heart className="h-4 w-4 text-accent" />
-            <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-foreground">
+            <h3 className="text-sm font-semibold uppercase tracking-label text-foreground">
               Favorite Drivers
             </h3>
           </div>

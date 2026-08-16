@@ -68,7 +68,7 @@ while drivers go online and accept or reject requests in real time.
 | Animation  | [Framer Motion](https://www.framer.com/motion) — spring micro-interactions     |
 | Backend    | [Firebase](https://firebase.google.com) — Auth, Firestore, Storage             |
 | Maps       | [MapLibre GL](https://maplibre.org)                                            |
-| Fonts      | Sora (display) + Inter (body) via `next/font`                                  |
+| Fonts      | Manrope (display) + Inter (body) via `next/font`                              |
 | Auth       | Firebase Auth (email / Google) + Phone OTP via SMS                                |
 
 ---

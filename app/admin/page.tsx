@@ -490,7 +490,7 @@ function CreateEventModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Nairobi F1 Grand Prix"
-              className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-[15px] text-slate-900 focus:outline-none focus:ring-2 focus:ring-ring/60"
+              className="w-full rounded-xl border border-border bg-surface-2/70 px-4 py-3 text-[15px] text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
             />
           </label>
           <label className="block">
@@ -501,7 +501,7 @@ function CreateEventModal({
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g. Uhuru Gardens, Nairobi"
-              className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-[15px] text-slate-900 focus:outline-none focus:ring-2 focus:ring-ring/60"
+              className="w-full rounded-xl border border-border bg-surface-2/70 px-4 py-3 text-[15px] text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
             />
           </label>
           <label className="block">
@@ -512,7 +512,7 @@ function CreateEventModal({
               type="datetime-local"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-[15px] text-slate-900 [color-scheme:light] focus:outline-none focus:ring-2 focus:ring-ring/60"
+              className="w-full rounded-xl border border-border bg-surface-2/70 px-4 py-3 text-[15px] text-foreground [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-ring/50"
             />
           </label>
           <label className="block">
@@ -526,7 +526,7 @@ function CreateEventModal({
               value={budget}
               onChange={(e) => setBudget(e.target.value)}
               placeholder="e.g. 2500"
-              className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-[15px] text-slate-900 focus:outline-none focus:ring-2 focus:ring-ring/60"
+              className="w-full rounded-xl border border-border bg-surface-2/70 px-4 py-3 text-[15px] text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
             />
           </label>
 

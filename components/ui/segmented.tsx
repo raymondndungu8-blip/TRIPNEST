@@ -38,10 +38,10 @@ export function Segmented<T extends string>({
             aria-checked={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "relative flex flex-col items-start gap-0.5 rounded-xl border px-3.5 py-3 text-left transition-colors duration-200",
+              "relative flex flex-col items-start gap-0.5 rounded-xl border px-3.5 py-3 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               active
-                ? "border-accent/50 text-foreground"
-                : "border-border bg-surface-2/40 text-muted-foreground hover:text-foreground"
+                ? "border-accent/50 text-foreground shadow-[0_0_16px_rgba(0,212,255,0.1)]"
+                : "border-border bg-surface-2/40 text-muted-foreground hover:border-accent/25 hover:text-foreground"
             )}
           >
             {active && (

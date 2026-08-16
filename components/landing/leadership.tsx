@@ -28,7 +28,7 @@ export function LeadershipSection() {
 
       <div className="relative mx-auto w-full max-w-3xl">
         <div className="text-center">
-          <h2 className="font-display text-xs font-bold uppercase tracking-[0.3em] text-accent">
+          <h2 className="text-xs font-bold uppercase tracking-eyebrow text-accent">
             Leadership
           </h2>
           <p className="mt-3 font-display text-2xl font-semibold text-foreground">

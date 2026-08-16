@@ -244,7 +244,7 @@ export function DriverMap({
   }, [points]);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-[1.35rem] border border-cyan-400/15 bg-[#050912] shadow-[0_18px_55px_rgba(0,0,0,0.45)]">
+    <div className="relative w-full overflow-hidden rounded-[1.35rem] border border-border bg-background shadow-card">
       <div ref={containerRef} className="h-[252px] w-full" />
 
       {/* Nearby banner */}
@@ -278,23 +278,23 @@ export function DriverMap({
       </div>
 
       {/* Legend */}
-      <div className="pointer-events-none absolute inset-x-4 bottom-3 z-10 flex items-center gap-3 rounded-xl border border-white/10 bg-[#060a13]/78 px-3 py-2 text-[12px] font-semibold text-foreground shadow-[0_10px_28px_rgba(0,0,0,0.42)] backdrop-blur-md">
+      <div className="pointer-events-none absolute inset-x-4 bottom-3 z-10 flex items-center gap-3 rounded-xl border border-border bg-background/80 px-3 py-2 text-[12px] font-semibold text-foreground shadow-sm backdrop-blur-md">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-success" />
           Online
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#64748b]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/50" />
           Offline
         </span>
         <span className="ml-auto inline-flex items-center gap-1.5 text-muted-foreground">
-          <span className="h-2.5 w-2.5 rounded-full border-2 border-white bg-[#38bdf8]" />
+          <span className="h-2.5 w-2.5 rounded-full border-2 border-background bg-accent" />
           You
         </span>
       </div>
 
       {!ready && !failed && (
-        <div className="absolute inset-0 z-0 grid place-items-center bg-[#050912]">
+        <div className="absolute inset-0 z-0 grid place-items-center bg-background">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <MapPin className="h-4 w-4 animate-pulse text-accent" />
             Finding drivers near you…

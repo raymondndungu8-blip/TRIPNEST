@@ -77,7 +77,7 @@ export default function LandingPage() {
                 fullWidth
                 onClick={handleClient}
                 disabled={loading}
-                className="mx-auto h-9 w-full max-w-[20rem] rounded-full border border-[#7dd3fc]/60 bg-[#0ea5e9] text-[10px] font-bold uppercase tracking-[0.075em] text-white shadow-[0_7px_18px_rgba(14,165,233,0.24)] transition-transform duration-200 hover:bg-[#38bdf8] active:scale-[0.98]"
+                className="mx-auto h-9 w-full max-w-[20rem] rounded-full border border-white/15 bg-brand-gradient text-[10px] font-bold uppercase tracking-[0.075em] text-primary-foreground shadow-[0_7px_18px_rgba(14,165,233,0.24)] transition-transform duration-200 hover:brightness-110 active:scale-[0.98]"
               >
                 Find your ride
                 <ArrowRight className="ml-1 h-3 w-3" aria-hidden />
@@ -94,7 +94,16 @@ export default function LandingPage() {
               </Button>
             </div>
 
-            <p className="mt-3 text-center text-[10px] text-white/60">
+            {/* Trust reassurance */}
+            <p className="mt-3 flex items-center justify-center gap-2 text-center text-[10px] tracking-wide text-white/55">
+              <span>Vetted drivers</span>
+              <span aria-hidden className="text-white/30">·</span>
+              <span>Upfront fares</span>
+              <span aria-hidden className="text-white/30">·</span>
+              <span>Secure payments</span>
+            </p>
+
+            <p className="mt-2 text-center text-[10px] text-white/60">
               Already have an account?{" "}
               <button
                 type="button"

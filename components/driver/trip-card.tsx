@@ -142,7 +142,7 @@ export function TripCard({
             fullWidth
             loading={busy}
             onClick={handleConfirmArrival}
-            className="border-transparent bg-emerald-600 text-white hover:bg-emerald-500"
+            className="border-transparent bg-success text-white hover:bg-emerald-500"
           >
             {!busy && <MapPin className="h-4 w-4" />}
             Confirm arrival & request {formatKES(ride.budget)}

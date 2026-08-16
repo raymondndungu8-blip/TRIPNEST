@@ -289,7 +289,7 @@ export function ActiveRideTracker({
               ? "Your ride code"
               : "Share with driver at pickup"}
           </span>
-          <span className="font-display text-xl font-bold tracking-[0.3em] tabular-nums text-foreground">
+          <span className="text-xl font-semibold tracking-label tabular-nums text-foreground">
             {ride.verification_code}
           </span>
         </div>

@@ -231,7 +231,7 @@ function WalletContent() {
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">TripNest Credit</p>
-            <p className="font-display text-2xl font-extrabold text-foreground">KES 0.00</p>
+            <p className="text-3xl font-extrabold tabular-nums tracking-tight text-foreground">KES 0.00</p>
           </div>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
@@ -242,7 +242,7 @@ function WalletContent() {
       {/* Payment Methods */}
       <div className="mt-6">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
+          <h2 className="text-sm font-bold uppercase tracking-label text-muted-foreground">
             Payment Methods
           </h2>
           <button
@@ -299,7 +299,7 @@ function WalletContent() {
       {/* Recent Transactions */}
       <div className="mt-7">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
+          <h2 className="text-sm font-bold uppercase tracking-label text-muted-foreground">
             Recent Rides
           </h2>
           <Receipt className="h-4 w-4 text-muted-foreground/40" />

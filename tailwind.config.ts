@@ -25,13 +25,37 @@ const config: Config = {
         },
         accent: "var(--accent)",
         success: "var(--success)",
+        "success-soft": "var(--success-soft)",
+        verified: "var(--verified)",
         warning: "var(--warning)",
         destructive: "var(--destructive)",
         ring: "var(--ring)",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        display: ["var(--font-sora)", "var(--font-inter)", "sans-serif"],
+        display: ["var(--font-manrope)", "var(--font-inter)", "sans-serif"],
+      },
+      fontSize: {
+        // Modular type scale (mobile-first). Line-heights snap to a 4px grid
+        // (size x ~1.4-1.5 rounded to 4). Tracking loosens on small/uppercase
+        // text and tightens as display sizes grow — the Uber Move convention.
+        xs: ["0.75rem", { lineHeight: "1rem", letterSpacing: "0.03em" }],
+        sm: ["0.875rem", { lineHeight: "1.25rem", letterSpacing: "0.01em" }],
+        base: ["1rem", { lineHeight: "1.5rem", letterSpacing: "-0.011em" }],
+        lg: ["1.125rem", { lineHeight: "1.75rem", letterSpacing: "-0.011em" }],
+        xl: ["1.25rem", { lineHeight: "1.75rem", letterSpacing: "-0.014em" }],
+        "2xl": ["1.5rem", { lineHeight: "2rem", letterSpacing: "-0.017em" }],
+        "3xl": ["1.875rem", { lineHeight: "2.375rem", letterSpacing: "-0.022em" }],
+        "4xl": ["2.25rem", { lineHeight: "2.5rem", letterSpacing: "-0.028em" }],
+        "5xl": ["2.75rem", { lineHeight: "1.05", letterSpacing: "-0.033em" }],
+        "6xl": ["3.5rem", { lineHeight: "1.04", letterSpacing: "-0.04em" }],
+        "7xl": ["4.25rem", { lineHeight: "1.03", letterSpacing: "-0.045em" }],
+        "8xl": ["6rem", { lineHeight: "1.02", letterSpacing: "-0.05em" }],
+      },
+      letterSpacing: {
+        // Refined brand/label tracking steps (used with uppercase micro-labels)
+        label: "0.2em",
+        eyebrow: "0.32em",
       },
       borderRadius: {
         xl: "1rem",
@@ -39,9 +63,10 @@ const config: Config = {
         "3xl": "1.75rem",
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(0,212,255,0.25), 0 12px 40px -12px rgba(0,212,255,0.55)",
-        card: "0 8px 30px -12px rgba(0,0,0,0.6)",
-        "card-hover": "0 16px 50px -12px rgba(0,212,255,0.35)",
+        glow: "0 0 0 1px rgba(0,212,255,0.22), 0 12px 36px -14px rgba(0,212,255,0.5)",
+        card: "0 10px 32px -14px rgba(2,6,18,0.85)",
+        "card-hover": "0 18px 52px -16px rgba(0,212,255,0.38)",
+        nav: "0 18px 50px rgba(2,6,18,0.72)",
       },
       backgroundImage: {
         "brand-gradient": "linear-gradient(135deg, #0891b2 0%, #00d4ff 50%, #22d3ee 100%)",

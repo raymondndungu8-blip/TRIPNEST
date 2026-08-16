@@ -81,7 +81,7 @@ export function PhotoUpload({
           "relative grid w-full place-items-center overflow-hidden rounded-2xl border border-dashed transition-colors",
           hasImage
             ? "border-border bg-surface-2/40"
-            : "border-white/15 bg-white/[0.03] hover:border-accent/50 hover:bg-accent/5",
+            : "border-border bg-surface-2/40 hover:border-accent/50 hover:bg-accent/5",
           crop === "round" ? "h-28 w-28 rounded-full border-2" : "h-36"
         )}
       >

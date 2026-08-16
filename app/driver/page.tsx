@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeftRight,
+  CalendarClock,
   CalendarCheck,
   Inbox,
   Moon,
@@ -12,7 +13,9 @@ import {
 } from "lucide-react";
 import { useSession } from "@/components/providers/session-provider";
 import { RequireRole } from "@/components/auth/require-role";
-import { useDriverRides, useOpenRequests } from "@/hooks/use-rides";
+import { useDriverRides, useOpenRequests, useScheduledRequests } from "@/hooks/use-rides";
+import { useRequestAlert } from "@/hooks/use-request-alert";
+import { useExpireStaleRequests } from "@/hooks/use-expire-stale-requests";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +26,7 @@ import { formatKES } from "@/lib/utils";
 import type { Driver } from "@/lib/types";
 import { AvailabilityCard } from "@/components/driver/availability-card";
 import { RequestCard } from "@/components/driver/request-card";
+import { RequestAlertBanner } from "@/components/driver/request-alert-banner";
 import { TripCard } from "@/components/driver/trip-card";
 import { StatCard } from "@/components/driver/stat-card";
 import { BecomeRiderModal } from "@/components/driver/become-rider-modal";
@@ -48,7 +52,17 @@ function DriverDashboard({ driver }: { driver: Driver }) {
     refetch: refetchRequests,
   } = useOpenRequests(driver.id, driver.is_available);
 
+  const {
+    rides: scheduledRequests,
+    loading: scheduledLoading,
+  } = useScheduledRequests(driver.id, driver.is_available);
+
   const { rides: myTrips, refetch: refetchTrips } = useDriverRides(driver.id);
+
+  // Chime + banner when a new request arrives; expires stale ones in the
+  // background so nobody accepts a dead request.
+  const { alert: requestAlert, dismiss: dismissAlert } = useRequestAlert(requests);
+  useExpireStaleRequests(requests, driver.is_available);
 
   const upcoming = useMemo(
     () =>
@@ -149,6 +163,42 @@ function DriverDashboard({ driver }: { driver: Driver }) {
         <AvailabilityCard driver={driver} />
       </div>
 
+      {/* Scheduled pickups — future-dated bookings accepted in advance */}
+      {driver.is_available && (
+        <div className="mt-6">
+          <SectionTitle
+            action={
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <CalendarClock className="h-3.5 w-3.5" />
+                {scheduledRequests.length} upcoming
+              </span>
+            }
+          >
+            Scheduled pickups
+          </SectionTitle>
+          {scheduledLoading ? (
+            <Skeleton className="h-44 w-full" />
+          ) : scheduledRequests.length === 0 ? (
+            <EmptyState
+              icon={CalendarClock}
+              title="No scheduled pickups"
+              description="Rides booked ahead of time will show here for you to accept."
+            />
+          ) : (
+            <StaggerList className="space-y-3">
+              {scheduledRequests.map((ride) => (
+                <RequestCard
+                  key={ride.id}
+                  ride={ride}
+                  driverId={driver.id}
+                  onResolved={refetchAll}
+                />
+              ))}
+            </StaggerList>
+          )}
+        </div>
+      )}
+
       {/* Stats */}
       <StaggerList className="mb-1 grid grid-cols-3 gap-2">
         <StatCard
@@ -200,6 +250,15 @@ function DriverDashboard({ driver }: { driver: Driver }) {
         <BecomeRiderModal
           driver={driver}
           onClose={() => setShowBecomeRider(false)}
+        />
+      )}
+
+      {requestAlert && (
+        <RequestAlertBanner
+          ride={requestAlert}
+          driverId={driver.id}
+          onAccepted={refetchAll}
+          onDismiss={dismissAlert}
         />
       )}
     </AppShell>

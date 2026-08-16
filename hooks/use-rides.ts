@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { onSnapshot } from "firebase/firestore";
 import { collections } from "@/lib/db";
-import {
-  fetchClientRides,
-  fetchDriverRides,
-  fetchOpenRequests,
-} from "@/lib/rides";
+import { fetchClientRides, fetchDriverRides, fetchOpenRequests, fetchScheduledRequests } from "@/lib/rides";
 import { fetchAvailableDrivers, fetchMapDrivers } from "@/lib/favorites";
 import type { Driver, RideWithRelations, VehicleCategory } from "@/lib/types";
 
@@ -74,6 +70,20 @@ export function useOpenRequests(
   return useRealtimeRides(
     `open-${driverId ?? "none"}`,
     driverId && available ? () => fetchOpenRequests(driverId) : null
+  );
+}
+
+/**
+ * Realtime list of future-dated (scheduled) requests a driver can accept in
+ * advance. Sorted soonest-first; also refetches whenever any ride changes.
+ */
+export function useScheduledRequests(
+  driverId: string | null | undefined,
+  available: boolean
+) {
+  return useRealtimeRides(
+    `scheduled-${driverId ?? "none"}`,
+    driverId && available ? () => fetchScheduledRequests(driverId) : null
   );
 }
 

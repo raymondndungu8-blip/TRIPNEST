@@ -24,7 +24,7 @@ export function FlatPrice({
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           {shared ? "Cost sharing · flat rate" : "Private ride · flat rate"}
         </p>
-        <p className="font-display text-xl font-bold text-accent">
+        <p className="text-2xl font-bold tabular-nums tracking-tight text-accent">
           {formatKes(cost)}
         </p>
       </div>

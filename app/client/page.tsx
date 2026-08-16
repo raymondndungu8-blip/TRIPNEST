@@ -14,6 +14,8 @@ import {
   ShieldCheck,
   CheckCircle2,
   Smartphone,
+  Lock,
+  Headphones,
   Menu,
   Car,
   Bus,
@@ -718,7 +720,7 @@ function ClientDashboard() {
   }
 
   return (
-    <AppShell className="tripnest-client-dashboard max-w-md bg-[#060a13] px-4 pt-6">
+    <AppShell className="tripnest-client-dashboard max-w-md bg-background px-4 pt-6">
       <MenuDrawer
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -730,21 +732,21 @@ function ClientDashboard() {
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
-          className="grid h-10 w-10 place-items-center rounded-xl border border-white/[0.06] text-slate-400 transition-colors hover:bg-white/5 hover:text-foreground"
+          className="grid h-10 w-10 place-items-center rounded-xl border border-border text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground"
           aria-label="Menu"
           aria-haspopup="dialog"
           aria-expanded={menuOpen}
         >
           <Menu className="h-5 w-5" />
         </button>
-        <span className="font-display text-[1.15rem] font-bold uppercase tracking-[0.22em] text-white">
+        <span className="font-display text-[1.15rem] font-bold uppercase tracking-[0.18em] text-foreground">
           TRIPNEST
         </span>
-        <Avatar name={client.name} size={36} className="shadow-[0_0_28px_rgba(0,212,255,0.45)]" />
+        <Avatar name={client.name} size={36} />
       </div>
 
-      <div className="mb-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+      <div className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-label text-accent">
           Good to see you, {client.name.split(" ")[0]}
         </p>
         <h1 className="mt-1 font-display text-[1.65rem] font-extrabold leading-tight tracking-[-0.035em] text-foreground">
@@ -756,7 +758,7 @@ function ClientDashboard() {
       </div>
 
       {/* Ride Now / Schedule tabs */}
-      <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl border border-cyan-400/10 bg-[#0d1728] p-1.5">
+      <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl border border-border bg-surface-2/50 p-1.5">
         {(["now", "schedule"] as const).map((m) => (
           <button
             key={m}
@@ -766,8 +768,8 @@ function ClientDashboard() {
             className={cn(
               "h-12 rounded-xl text-sm font-bold transition-all",
               mode === m
-                ? "bg-accent text-[#06101c] shadow-[0_0_22px_rgba(0,212,255,0.24)]"
-                : "bg-transparent text-slate-500 hover:bg-white/[0.04] hover:text-foreground"
+                ? "bg-accent text-primary-foreground shadow-[0_0_18px_rgba(0,212,255,0.2)]"
+                : "bg-transparent text-muted-foreground hover:bg-surface-2/70 hover:text-foreground"
             )}
           >
             {m === "now" ? "Ride Now" : "Schedule"}
@@ -776,9 +778,9 @@ function ClientDashboard() {
       </div>
 
       {/* Location fields */}
-      <div className="mb-5 overflow-hidden rounded-[1.35rem] border border-cyan-400/10 bg-[#10182a]/92 shadow-[0_18px_55px_rgba(0,0,0,0.3)]">
+      <div className="mb-5 overflow-hidden rounded-[1.35rem] border border-border bg-surface/90 shadow-card">
         <div className="p-4">
-          <div className="flex items-center gap-3 border-b border-white/[0.06] pb-4">
+          <div className="flex items-center gap-3 border-b border-border pb-4">
             <span className="grid h-8 w-8 shrink-0 place-items-center">
               <span className="h-2.5 w-2.5 rounded-full border-2 border-muted-foreground" />
             </span>
@@ -791,7 +793,7 @@ function ClientDashboard() {
               placeholder="Pickup location"
               aria-label="Pickup location"
               maxLength={200}
-              className="input-transparent w-full bg-transparent text-[15px] font-medium text-slate-200 placeholder:text-slate-500 focus:outline-none"
+              className="input-transparent w-full bg-transparent text-[15px] font-medium text-foreground focus:outline-none"
             />
             <button
               type="button"
@@ -818,14 +820,14 @@ function ClientDashboard() {
               placeholder="Where are you going?"
               aria-label="Destination"
               maxLength={200}
-              className="input-transparent w-full bg-transparent text-[15px] font-medium text-slate-200 placeholder:text-slate-500 focus:outline-none"
+              className="input-transparent w-full bg-transparent text-[15px] font-medium text-foreground focus:outline-none"
             />
           </div>
 
           {/* Pickup date & time — sits right under Where To when scheduling */}
           {mode === "schedule" && (
             <FadeIn>
-              <div className="mt-3 border-t border-white/[0.06] pt-3">
+              <div className="mt-3 border-t border-border pt-3">
                 <div className="mb-2.5 flex items-center gap-2">
                   <CalendarHeart className="h-3.5 w-3.5 text-accent" />
                   <span className="text-sm font-semibold text-foreground">
@@ -842,7 +844,7 @@ function ClientDashboard() {
                       value={scheduledDate}
                       min={new Date().toISOString().split("T")[0]}
                       onChange={(e) => setScheduledDate(e.target.value)}
-                      className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2.5 text-sm text-slate-200 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-accent/60"
+                      className="w-full rounded-xl border border-border bg-surface-2/60 px-3 py-2.5 text-sm text-foreground [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-ring/50"
                     />
                   </div>
                   <div>
@@ -853,7 +855,7 @@ function ClientDashboard() {
                       type="time"
                       value={scheduledTime}
                       onChange={(e) => setScheduledTime(e.target.value)}
-                      className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2.5 text-sm text-slate-200 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-accent/60"
+                      className="w-full rounded-xl border border-border bg-surface-2/60 px-3 py-2.5 text-sm text-foreground [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-ring/50"
                     />
                   </div>
                 </div>
@@ -863,10 +865,26 @@ function ClientDashboard() {
         </div>
       </div>
 
+      {/* Trust signals */}
+      <div className="mb-6 flex items-center justify-around gap-2 rounded-2xl border border-border bg-surface/40 px-3 py-3">
+        {[
+          { icon: ShieldCheck, label: "Verified drivers" },
+          { icon: Lock, label: "Secure payments" },
+          { icon: Headphones, label: "24/7 support" },
+        ].map((item) => (
+          <div key={item.label} className="flex items-center gap-1.5">
+            <item.icon className="h-4 w-4 shrink-0 text-success" />
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {item.label}
+            </span>
+          </div>
+        ))}
+      </div>
+
       {/* Ride type */}
       <div className="mb-6">
         <div className="mb-3 flex items-center justify-between">
-          <h4 className="text-sm font-bold uppercase tracking-[0.12em] text-muted-foreground">Ride type</h4>
+          <h4 className="text-sm font-bold uppercase tracking-label text-muted-foreground">Ride type</h4>
           <span className="text-xs text-muted-foreground">Choose how you travel</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -887,8 +905,8 @@ function ClientDashboard() {
                 className={cn(
                   "flex min-h-[3.55rem] items-center justify-center gap-2 rounded-2xl border text-sm font-bold transition-all",
                   active
-                    ? "border-accent bg-accent/[0.08] text-accent shadow-[0_0_18px_rgba(0,212,255,0.12)]"
-                    : "border-cyan-400/10 bg-transparent text-slate-500 hover:text-foreground"
+                    ? "border-accent bg-primary-soft text-accent shadow-[0_0_18px_rgba(0,212,255,0.12)]"
+                    : "border-border bg-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
                 <opt.icon className="h-4 w-4" />
@@ -902,7 +920,7 @@ function ClientDashboard() {
       {/* How many people are sharing — cost sharing only */}
       {rideType === "cost_sharing" && (
         <FadeIn>
-          <div className="mb-3 rounded-2xl border border-cyan-400/10 bg-[#10182a]/92 p-3">
+          <div className="mb-3 rounded-2xl border border-border bg-surface/90 p-3">
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-sm font-bold text-foreground">
                 How many of you?
@@ -922,7 +940,7 @@ function ClientDashboard() {
                       "grid h-9 min-w-[2.75rem] place-items-center rounded-xl border text-sm font-bold transition-all",
                       passengers === n
                         ? "border-accent bg-accent/[0.12] text-accent shadow-[0_0_14px_rgba(0,212,255,0.14)]"
-                        : "border-white/10 bg-white/[0.03] text-slate-400 hover:text-foreground"
+                        : "border-border bg-surface-2/40 text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {n}
@@ -1039,7 +1057,7 @@ function ClientDashboard() {
       </div>
 
       {/* Confirm button */}
-      <div className="sticky bottom-24 z-10 -mx-1 mt-2 rounded-2xl border border-cyan-400/10 bg-[#060a13]/85 p-2 backdrop-blur-xl">
+      <div className="sticky bottom-24 z-10 -mx-1 mt-2 rounded-2xl border border-border bg-background/85 p-2 backdrop-blur-xl">
         <div className="mb-2 flex items-center justify-between px-1.5 text-xs">
           <span className="text-muted-foreground">{selected.name}</span>
           <span className="font-semibold text-foreground">

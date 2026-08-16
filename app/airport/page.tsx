@@ -119,7 +119,7 @@ export default function AirportPage() {
       {/* Upcoming flights */}
       <div className="mb-3 flex items-center gap-2">
         <PlaneTakeoff className="h-4 w-4 text-accent" />
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-foreground">
+        <h2 className="text-sm font-semibold uppercase tracking-label text-foreground">
           Upcoming Departures
         </h2>
       </div>

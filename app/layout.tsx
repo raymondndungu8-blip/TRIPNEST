@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Sora } from "next/font/google";
+import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -9,10 +9,10 @@ const inter = Inter({
   display: "swap",
 });
 
-const sora = Sora({
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-sora",
-  weight: ["500", "600", "700", "800"],
+  variable: "--font-manrope",
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -62,7 +62,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${sora.variable}`}>
+    <html lang="en" className={`${inter.variable} ${manrope.variable}`}>
       <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>

@@ -23,9 +23,9 @@ export function Switch({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors duration-200 disabled:opacity-50",
+        "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50",
         checked
-          ? "border-transparent bg-brand-gradient"
+          ? "border-transparent bg-brand-gradient shadow-[0_0_14px_rgba(0,212,255,0.28)]"
           : "border-border bg-surface-2"
       )}
     >

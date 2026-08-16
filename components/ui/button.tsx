@@ -17,11 +17,11 @@ export interface ButtonProps
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "bg-brand-gradient text-primary-foreground shadow-glow hover:brightness-110 active:scale-[0.98]",
+    "bg-brand-gradient text-primary-foreground shadow-glow hover:shadow-[0_0_0_1px_rgba(0,212,255,0.35),0_16px_44px_-14px_rgba(0,212,255,0.62)] hover:brightness-110 active:brightness-95 active:scale-[0.98]",
   secondary:
-    "bg-surface-2 text-foreground border border-border hover:bg-muted active:scale-[0.98]",
+    "bg-surface-2 text-foreground border border-border shadow-sm hover:bg-muted hover:border-muted active:scale-[0.98]",
   outline:
-    "border border-border bg-transparent text-foreground hover:bg-surface-2 active:scale-[0.98]",
+    "border border-border bg-transparent text-foreground hover:border-accent/35 hover:bg-surface-2 active:scale-[0.98]",
   ghost: "bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2",
   destructive:
     "bg-destructive/15 text-destructive border border-destructive/30 hover:bg-destructive/25 active:scale-[0.98]",
@@ -53,7 +53,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         className={cn(
-          "inline-flex select-none items-center justify-center font-medium transition-all duration-200",
+          "inline-flex select-none items-center justify-center font-semibold tracking-tight transition-all duration-200",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           "disabled:pointer-events-none disabled:opacity-50",
           VARIANTS[variant],

@@ -41,10 +41,10 @@ export function Field({
   );
 }
 
-// Light fill + solid dark text — always legible (and immune to browser autofill
-// painting the field white, which hid light text on some devices).
+// Dark-surface fill + light text — matches the rest of the app (and the
+// autofill override in globals.css keeps browsers painting it on-theme).
 const inputBase =
-  "w-full rounded-xl border border-white/10 bg-white px-4 text-[15px] text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring/60 disabled:opacity-50 [color-scheme:light]";
+  "w-full rounded-xl border border-border bg-surface-2/70 px-4 text-[15px] text-foreground placeholder:text-muted-foreground transition-all duration-200 focus:border-accent/40 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:bg-surface-2 disabled:opacity-50 [color-scheme:dark]";
 
 export const Input = forwardRef<
   HTMLInputElement,

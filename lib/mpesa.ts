@@ -2,6 +2,16 @@ export interface PayInput {
   ride_id: string;
 }
 
+import { auth } from "./firebase";
+
+async function authCurrentToken(): Promise<string | null> {
+  try {
+    return (await auth.currentUser?.getIdToken()) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export interface PayResult {
   ok: boolean;
   checkoutRequestId?: string;
@@ -11,9 +21,13 @@ export interface PayResult {
 
 export async function payWithMpesa(input: PayInput): Promise<PayResult> {
   try {
+    const token = await authCurrentToken();
     const response = await fetch("/api/mpesa-stk", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(input),
     })
 

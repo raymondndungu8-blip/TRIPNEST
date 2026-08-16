@@ -94,7 +94,7 @@ export function OnboardingCarousel() {
 
   return (
     <div className="w-full">
-      <p className="mb-3 text-center font-display text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/60">
+      <p className="mb-3 text-center text-xs font-semibold uppercase tracking-label text-muted-foreground/60">
         How TripNest works
       </p>
 
