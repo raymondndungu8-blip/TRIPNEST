@@ -178,7 +178,11 @@ export async function POST(request: NextRequest) {
       customerMessage: stk.CustomerMessage ?? "M-Pesa PIN prompt sent",
     })
   } catch (err) {
+    // Never leak internals (M-Pesa token errors, stack text, env names).
     console.error("[mpesa-stk] error", err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return NextResponse.json(
+      { error: "Could not start the payment. Try again." },
+      { status: 500 }
+    )
   }
 }

@@ -10,7 +10,7 @@ export function middleware(request: NextRequest) {
 
   response.headers.set('X-Client-IP', clientIp)
 
-  const sensitivePaths = ['/api/payment', '/api/admin', '/api/wallet']
+  const sensitivePaths = ['/api/mpesa-stk', '/api/mpesa-callback', '/api/push/notify', '/api/otp']
   const isSensitive = sensitivePaths.some(path => pathname.startsWith(path))
 
   if (isSensitive) {

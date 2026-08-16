@@ -11,12 +11,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RequireRole } from "@/components/auth/require-role";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
-import { onSnapshot, query } from "firebase/firestore";
+import { onSnapshot, query, limitToLast } from "firebase/firestore";
 import { db } from "@/lib/firestore";
 import { collections, where, orderBy } from "@/lib/db";
 import {
   fetchDriverConversations,
   fetchMessages,
+  fetchOlderMessages,
+  MESSAGE_PAGE_SIZE,
   sendMessage,
   markConversationRead,
   type DriverConversationPreview,
@@ -62,6 +64,8 @@ function ChatView({
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [olderLoading, setOlderLoading] = useState(false);
+  const [noMoreOlder, setNoMoreOlder] = useState(false);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -75,13 +79,19 @@ function ChatView({
       collections.messages(),
       where("clientId", "==", clientId),
       where("driverId", "==", driverId),
-      orderBy("createdAt", "asc")
+      orderBy("createdAt", "asc"),
+      limitToLast(MESSAGE_PAGE_SIZE)
     );
     const unsub = onSnapshot(
       q,
       (snap) => {
         const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Message[];
-        setMessages(msgs);
+        setMessages((prev) => {
+          // The live query re-fires on every message change and may now
+          // include rows we already loaded via "Load earlier" — dedupe.
+          const ids = new Set(msgs.map((m) => m.id));
+          return [...prev.filter((m) => !ids.has(m.id)), ...msgs];
+        });
         setLoading(false);
         markConversationRead(clientId, driverId, "driver");
         setTimeout(scrollToBottom, 100);
@@ -92,6 +102,26 @@ function ChatView({
     );
     return () => unsub();
   }, [clientId, driverId, scrollToBottom]);
+
+  async function loadEarlier() {
+    if (olderLoading || noMoreOlder) return;
+    const oldest = messages[0];
+    if (!oldest) return;
+    setOlderLoading(true);
+    try {
+      const older = await fetchOlderMessages(clientId, driverId, oldest.createdAt);
+      setMessages((prev) => {
+        const ids = new Set(prev.map((m) => m.id));
+        const fresh = older.filter((m) => !ids.has(m.id));
+        return [...fresh, ...prev];
+      });
+      if (older.length < MESSAGE_PAGE_SIZE) setNoMoreOlder(true);
+    } catch {
+      toast("Could not load earlier messages", "error");
+    } finally {
+      setOlderLoading(false);
+    }
+  }
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -154,6 +184,17 @@ function ChatView({
           </div>
         ) : (
           <div className="space-y-2 px-1">
+            {!noMoreOlder && (
+              <div className="flex justify-center">
+                <button
+                  onClick={loadEarlier}
+                  disabled={olderLoading}
+                  className="rounded-full border border-border bg-surface-2/60 px-3.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-60"
+                >
+                  {olderLoading ? "Loading…" : "Load earlier messages"}
+                </button>
+              </div>
+            )}
             {messages.map((msg) => {
               const isMe = msg.senderType === "driver";
               return (

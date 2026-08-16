@@ -5,8 +5,10 @@ import {
   getDocument,
   createDocument,
   patchDocument,
+  query,
+  getDocs,
 } from "./db"
-import { where, orderBy, limit } from "firebase/firestore"
+import { where, orderBy, limit, startAfter } from "firebase/firestore"
 
 export interface Message {
   id: string
@@ -190,6 +192,34 @@ export async function fetchMessages(
     where("driverId", "==", driverId),
     orderBy("createdAt", "asc")
   )
+}
+
+/** Live message threads cap at this many newest messages on screen. */
+export const MESSAGE_PAGE_SIZE = 30
+
+/**
+ * Fetch the page of messages STRICTLY older than `beforeCreatedAt`, newest
+ * first on the wire (reversed to ascending for the thread). Lets a chat load
+ * historical messages in pages without dragging the whole thread down.
+ */
+export async function fetchOlderMessages(
+  clientId: string,
+  driverId: string,
+  beforeCreatedAt: string,
+  pageSize: number = MESSAGE_PAGE_SIZE
+): Promise<Message[]> {
+  const q = query(
+    collections.messages(),
+    where("clientId", "==", clientId),
+    where("driverId", "==", driverId),
+    orderBy("createdAt", "desc"),
+    startAfter(beforeCreatedAt),
+    limit(pageSize)
+  )
+  const snap = await getDocs(q)
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as Message))
+    .reverse()
 }
 
 export async function sendMessage(

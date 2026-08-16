@@ -15,6 +15,7 @@ import {
 import { useSession } from "@/components/providers/session-provider";
 import { RequireRole } from "@/components/auth/require-role";
 import { useDriverRides } from "@/hooks/use-rides";
+import { usePaginatedList } from "@/hooks/use-pagination";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -93,6 +94,8 @@ function DriverWallet({ driver }: { driver: Driver }) {
     .filter((r) => isThisWeek(r.created_at))
     .reduce((sum, r) => sum + (r.budget ?? 0), 0);
   const inProgressValue = inProgress.reduce((sum, r) => sum + (r.budget ?? 0), 0);
+
+  const payouts = usePaginatedList(paid, 8);
 
   if (loading) {
     return (
@@ -183,7 +186,7 @@ function DriverWallet({ driver }: { driver: Driver }) {
           />
         ) : (
           <div className="mt-3 space-y-2">
-            {paid.map((ride: Ride) => (
+            {payouts.visible.map((ride: Ride) => (
               <motion.div
                 key={ride.id}
                 initial={{ opacity: 0, y: 8 }}
@@ -213,6 +216,14 @@ function DriverWallet({ driver }: { driver: Driver }) {
                 </div>
               </motion.div>
             ))}
+            {payouts.hasMore && (
+              <button
+                onClick={payouts.showMore}
+                className="w-full rounded-2xl border border-border bg-surface-2/40 py-3 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Show more payouts ({paid.length - payouts.visible.length} more)
+              </button>
+            )}
           </div>
         )}
       </div>

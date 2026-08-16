@@ -5,6 +5,7 @@ import {
   verifyIdToken,
 } from "@/lib/server/firebase-rest"
 import { sendPushToSubscription } from "@/lib/server/webpush"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 
@@ -34,6 +35,15 @@ export async function POST(request: Request) {
     const verified = await verifyIdToken(idToken)
     if (!verified?.uid) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
+
+    // Per-account throttle so an authenticated user can't spam push volume.
+    const limit = checkRateLimit(`push:${verified.uid}`, 120, 60 * 1000)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many notifications. Try again shortly." },
+        { status: 429 }
+      )
     }
 
     const body = (await request.json()) as NotifyBody

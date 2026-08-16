@@ -8,6 +8,7 @@ import {
   getOrCreatePhoneUser,
   signCustomToken,
 } from "@/lib/server/firebase-rest"
+import { checkRateLimit, clientIp } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -37,6 +38,17 @@ interface OtpDoc {
  */
 export async function POST(request: Request) {
   try {
+    // Guard the guessing surface: brute-forcing a 6-digit code is tried a few
+    // codes at a time today, but IP throttling keeps scaled attempts in check.
+    const ip = clientIp(request)
+    const limit = checkRateLimit(`otp-verify:${ip}`, 12, 10 * 60 * 1000)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many attempts. Try again in a minute." },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json().catch(() => ({}))
     const phone = normalizePhone(String(body?.phone ?? ""))
     const code = String(body?.code ?? "").trim()

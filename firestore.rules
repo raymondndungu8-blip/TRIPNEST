@@ -60,7 +60,13 @@ service cloud.firestore {
 
     // ── Rides ──────────────────────────────────────────────────
     match /rides/{rideId} {
-      allow read: if signedIn();
+      // Open (unclaimed) requests are visible to every signed-in user so the
+      // driver dispatch feed works; anything else stays private to the client
+      // and the assigned driver involved.
+      allow read: if signedIn()
+        && (resource.data.status == 'requested'
+            || resource.data.clientId == request.auth.uid
+            || resource.data.driverId == request.auth.uid);
       allow create: if signedIn()
         && request.resource.data.clientId == request.auth.uid
         && request.resource.data.status == 'requested';
@@ -80,8 +86,25 @@ service cloud.firestore {
     // ── Messages / chat ────────────────────────────────────────
     match /messages/{msgId} {
       allow read: if signedIn();
-      allow create: if signedIn();
+      // Only the client or driver of a thread may post into it, with sane
+      // content limits — closes the "any signed-in user spams chats" hole.
+      allow create: if signedIn()
+        && (request.resource.data.clientId == request.auth.uid
+            || request.resource.data.driverId == request.auth.uid)
+        && request.resource.data.senderType in ['client', 'driver']
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 2000;
       allow update, delete: if false;
+    }
+
+    // ── Server-only collections (never reachable from the client SDK) ──
+    // Default-deny covers these; documented explicitly so future edits keep
+    // them admin/backend-only: payments, otpCodes, blockedIps, auditLogs.
+    match /payments/{docId} {
+      allow read, write: if false;
+    }
+    match /otpCodes/{docId} {
+      allow read, write: if false;
     }
 
     // ── Push subscriptions (own-device only) ───────────────────

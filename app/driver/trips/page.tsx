@@ -5,6 +5,7 @@ import { Route, CheckCheck, Ban } from "lucide-react";
 import { useSession } from "@/components/providers/session-provider";
 import { RequireRole } from "@/components/auth/require-role";
 import { useDriverRides } from "@/hooks/use-rides";
+import { usePaginatedList } from "@/hooks/use-pagination";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,6 +33,8 @@ function DriverTrips({ driver }: { driver: Driver }) {
     () => rides.filter((r) => r.status === "cancelled" || r.status === "rejected"),
     [rides]
   );
+
+  const completedPage = usePaginatedList(completed, 10);
 
   const hasAny = active.length + completed.length + cancelled.length > 0;
 
@@ -77,9 +80,17 @@ function DriverTrips({ driver }: { driver: Driver }) {
                 </span>
               </SectionTitle>
               <StaggerList className="space-y-3">
-                {completed.map((ride) => (
+                {completedPage.visible.map((ride) => (
                   <TripCard key={ride.id} ride={ride} onResolved={refetch} />
                 ))}
+                {completedPage.hasMore && (
+                  <button
+                    onClick={completedPage.showMore}
+                    className="w-full rounded-2xl border border-border bg-surface-2/40 py-3 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Show more completed ({completed.length - completedPage.visible.length} more)
+                  </button>
+                )}
               </StaggerList>
             </>
           )}

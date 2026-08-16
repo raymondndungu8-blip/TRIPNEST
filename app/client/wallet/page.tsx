@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { RequireRole } from "@/components/auth/require-role";
 import { useSession } from "@/components/providers/session-provider";
 import { useClientRides } from "@/hooks/use-rides";
+import { usePaginatedList } from "@/hooks/use-pagination";
 import { docs, patchDocument } from "@/lib/db";
 import { formatKES } from "@/lib/utils";
 import type { Client } from "@/lib/types";
@@ -274,6 +275,8 @@ function WalletContent({ client }: { client: Client }) {
     [rides]
   );
 
+  const transactionsPage = usePaginatedList(transactions, 8);
+
   function handleLinked(phone: string) {
     setClient({ ...client, phone });
     setShowAdd(false);
@@ -386,7 +389,7 @@ function WalletContent({ client }: { client: Client }) {
               </p>
             </div>
           )}
-          {transactions.map((tx) => (
+          {transactionsPage.visible.map((tx) => (
             <div
               key={tx.id}
               className="flex items-center justify-between rounded-2xl border border-border bg-surface-2/30 px-4 py-3"
@@ -402,6 +405,14 @@ function WalletContent({ client }: { client: Client }) {
             </div>
           ))}
         </div>
+        {transactionsPage.hasMore && (
+          <button
+            onClick={transactionsPage.showMore}
+            className="mt-3 w-full rounded-2xl border border-border bg-surface-2/40 py-3 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Show more rides ({transactions.length - transactionsPage.visible.length} more)
+          </button>
+        )}
       </div>
 
       {/* How It Works */}

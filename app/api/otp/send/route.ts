@@ -6,6 +6,7 @@ import {
   getRawDocument,
   setRawDocument,
 } from "@/lib/server/firebase-rest"
+import { checkRateLimit, clientIp } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -41,6 +42,17 @@ interface OtpDoc {
  */
 export async function POST(request: Request) {
   try {
+    // Per-IP guard: without one, an attacker could burn SMS credits by
+    // requesting codes for thousands of numbers in a burst.
+    const ip = clientIp(request)
+    const limit = checkRateLimit(`otp-send:${ip}`, 5, 10 * 60 * 1000)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Try again in a minute." },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json().catch(() => ({}))
     const phone = normalizePhone(String(body?.phone ?? ""))
     if (!isValidPhone(phone)) {

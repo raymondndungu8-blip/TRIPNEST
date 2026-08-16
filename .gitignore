@@ -11,6 +11,8 @@ next-env.d.ts
 legacy
 dev-server.log
 dev-server.err.log
+dev-server2.log
+dev-server2.err.log
 
 .vercel
 .env*
