@@ -281,6 +281,20 @@ function isFutureScheduled(ride: Ride): boolean {
   return new Date(ride.scheduled_at).getTime() > Date.now()
 }
 
+/**
+ * When an open request's expiry clock started. Instant rides run their 60s
+ * window from `created_at`; future-dated bookings only "open" when their
+ * scheduled time arrives (their clock starts then, not at booking time).
+ * Shared by the open feed and the stale-request sweeper so both stay in sync.
+ */
+export function rideDueAt(ride: Ride): number {
+  if (ride.scheduled_at) {
+    const scheduled = new Date(ride.scheduled_at).getTime()
+    if (scheduled <= Date.now()) return scheduled
+  }
+  return new Date(ride.created_at).getTime()
+}
+
 export async function fetchOpenRequests(
   driverId: string
 ): Promise<RideWithRelations[]> {
@@ -303,11 +317,13 @@ export async function fetchOpenRequests(
   const unclaimed = raw.filter((r) => !r.driverId)
   const rides = await populateRideRelations(unclaimed)
   // Instant feed only: exclude future-dated bookings (they go to the
-  // "Scheduled pickups" queue) and requests that have already expired.
+  // "Scheduled pickups" queue) and requests that have already expired. A
+  // scheduled ride appears here once its time hits, using its due time as
+  // the expiry clock so bookings made days ago stay dispatchable.
   const open = rides.filter((r) => {
     if ((r.rejected_by ?? []).includes(driverId)) return false
     if (isFutureScheduled(r)) return false
-    return now - new Date(r.created_at).getTime() <= REQUEST_TTL_SECONDS * 1000
+    return now - rideDueAt(r) <= REQUEST_TTL_SECONDS * 1000
   })
 
   if (!driverPos) return open

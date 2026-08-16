@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeftRight,
@@ -55,6 +55,7 @@ function DriverDashboard({ driver }: { driver: Driver }) {
   const {
     rides: scheduledRequests,
     loading: scheduledLoading,
+    refetch: refetchScheduled,
   } = useScheduledRequests(driver.id, driver.is_available);
 
   const { rides: myTrips, refetch: refetchTrips } = useDriverRides(driver.id);
@@ -63,6 +64,19 @@ function DriverDashboard({ driver }: { driver: Driver }) {
   // background so nobody accepts a dead request.
   const { alert: requestAlert, dismiss: dismissAlert } = useRequestAlert(requests);
   useExpireStaleRequests(requests, driver.is_available);
+
+  // Scheduled dispatch: a booking silently moves from the "Scheduled pickups"
+  // queue into the live feed when its time arrives (no Firestore write fires,
+  // so realtime alone won't notice). Poll every 30s to surface newly due rides.
+  useEffect(() => {
+    const tick = () => {
+      refetchRequests();
+      refetchScheduled();
+    };
+    tick();
+    const interval = setInterval(tick, 30_000);
+    return () => clearInterval(interval);
+  }, [refetchRequests, refetchScheduled]);
 
   const upcoming = useMemo(
     () =>

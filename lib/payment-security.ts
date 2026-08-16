@@ -13,19 +13,31 @@ export function getMpesaTimestamp(): string {
   return new Date().toISOString().replace(/[-T:.Z]/g, '').substring(0, 14)
 }
 
+/**
+ * Verify an M-Pesa callback signature. The HMAC covers the EXACT raw request
+ * body bytes with `MPESA_CALLBACK_SECRET`; comparing the raw string avoids
+ * whitespace / key-ordering drift that a JSON round-trip would introduce.
+ * Returns false whenever the secret or signature is missing, or on any
+ * mismatch, so an unauthenticated callback is always rejected.
+ */
+export function verifyCallbackSignature(
+  rawBody: string,
+  expectedSignature: string
+): boolean {
+  const secret = process.env.MPESA_CALLBACK_SECRET || ''
+  if (!secret || !expectedSignature) return false
+  const hmac = crypto.createHmac('sha256', secret).update(rawBody, 'utf8')
+  const calculated = Buffer.from(hmac.digest('hex'), 'utf8')
+  const expected = Buffer.from(expectedSignature.trim(), 'utf8')
+  if (calculated.length !== expected.length) return false
+  return crypto.timingSafeEqual(calculated, expected)
+}
+
 export function verifyMpesaCallback(
   requestBody: Record<string, unknown>,
   expectedSignature: string
 ): boolean {
-  const dataToVerify = JSON.stringify(requestBody)
-  const hmac = crypto.createHmac('sha256', process.env.MPESA_CALLBACK_SECRET || '')
-  hmac.update(dataToVerify)
-  const calculatedSignature = hmac.digest('hex')
-
-  return crypto.timingSafeEqual(
-    Buffer.from(calculatedSignature),
-    Buffer.from(expectedSignature)
-  )
+  return verifyCallbackSignature(JSON.stringify(requestBody), expectedSignature)
 }
 
 export function verifyPaymentAmount(

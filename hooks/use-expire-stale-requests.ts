@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { expireRideRequest, REQUEST_TTL_SECONDS } from "@/lib/rides";
+import { expireRideRequest, REQUEST_TTL_SECONDS, rideDueAt } from "@/lib/rides";
 import type { RideWithRelations } from "@/lib/types";
 
 /**
@@ -24,7 +24,8 @@ export function useExpireStaleRequests(
       const now = Date.now();
       const stale = requests.filter((r) => {
         if (expiredRef.current.has(r.id)) return false;
-        return now - new Date(r.created_at).getTime() > REQUEST_TTL_SECONDS * 1000;
+        // Scheduled rides only start counting down once their time arrives.
+        return now - rideDueAt(r) > REQUEST_TTL_SECONDS * 1000;
       });
 
       stale.forEach((ride) => {

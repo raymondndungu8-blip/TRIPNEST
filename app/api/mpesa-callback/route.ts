@@ -6,6 +6,7 @@ import {
   setRawDocument,
 } from "@/lib/server/firebase-rest"
 import { sendPushToSubscription } from "@/lib/server/webpush"
+import { verifyCallbackSignature } from "@/lib/payment-security"
 
 export const runtime = "nodejs"
 
@@ -16,6 +17,11 @@ export const runtime = "nodejs"
  *
  *   payments/{CheckoutRequestID}  →  status / mpesa_receipt
  *   rides/{rideId}                →  payment_status + status (completed on pay)
+ *
+ * Authentication: when `MPESA_CALLBACK_SECRET` is set the callback must carry a
+ * valid HMAC-SHA256 signature (`x-mpesa-signature` header) over the exact body,
+ * otherwise it is rejected with 403 so nobody can fake a "paid" result. If the
+ * secret is unset the check is skipped with a loud warning (dev fallback).
  */
 
 interface StkCallbackItem {
@@ -32,6 +38,24 @@ export async function POST(request: Request) {
     }
 
     const rawBody = await request.text()
+
+    // Enforce the HMAC once the shared secret is deployed. Until then the
+    // endpoint still works locally, but the miss is logged loudly.
+    if (process.env.MPESA_CALLBACK_SECRET) {
+      const signature =
+        request.headers.get("x-mpesa-signature") ??
+        request.headers.get("x-callback-signature")
+      if (!signature || !verifyCallbackSignature(rawBody, signature)) {
+        console.error("[mpesa-callback] rejected: invalid HMAC signature")
+        return NextResponse.json(
+          { ResultCode: 1, ResultDesc: "Invalid signature" },
+          { status: 403 }
+        )
+      }
+    } else {
+      console.warn("[mpesa-callback] MPESA_CALLBACK_SECRET is not set — skipping HMAC check")
+    }
+
     const body = JSON.parse(rawBody || "{}") as {
       Body?: {
         stkCallback?: {
