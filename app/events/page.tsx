@@ -19,6 +19,8 @@ import {
   type EventBookingSubmit,
 } from "@/components/events/event-booking-panel";
 import type { EventItem, RideType } from "@/lib/types";
+import { mergeVerifiedEvents } from "@/lib/events";
+import { VERIFIED_EVENTS } from "@/lib/verified-events";
 
 export default function EventsPage() {
   const router = useRouter();
@@ -36,15 +38,23 @@ export default function EventsPage() {
   useEffect(() => {
     let active = true;
     async function load() {
-      const [eventsData, driversData] = await Promise.all([
-        queryDocuments<EventItem>(collections.events(), orderBy("eventDate", "asc")),
-        queryDocuments<DriverPreview>(collections.drivers(), where("isAvailable", "==", true)),
-      ]);
-      if (!active) return;
-      setEvents(eventsData);
-      setDriverCount(driversData.length);
-      setDriverPreviews(driversData.slice(0, 3));
-      setLoading(false);
+      try {
+        const [eventsData, driversData] = await Promise.all([
+          queryDocuments<EventItem>(collections.events(), orderBy("eventDate", "asc")),
+          queryDocuments<DriverPreview>(collections.drivers(), where("isAvailable", "==", true)),
+        ]);
+        if (!active) return;
+        setEvents(mergeVerifiedEvents(eventsData));
+        setDriverCount(driversData.length);
+        setDriverPreviews(driversData.slice(0, 3));
+      } catch {
+        if (!active) return;
+        setEvents(VERIFIED_EVENTS);
+        setDriverCount(0);
+        setDriverPreviews([]);
+      } finally {
+        if (active) setLoading(false);
+      }
     }
     load();
     return () => {

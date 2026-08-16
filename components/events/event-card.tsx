@@ -8,30 +8,8 @@ import { motion } from "framer-motion";
 import type { EventItem, RideType } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
-/** Local fallback banners for seeded events (matched by keyword in the name). */
-const EVENT_IMAGE_MAP: Record<string, string> = {
-  summertides: "/images/event-summertides.jpg",
-  diani: "/images/event-diani-beach.jpg",
-  "night run": "/images/event-nairobi-run.jpg",
-  nairobi: "/images/tripnest-event-nairobi.jpg",
-};
-
 function resolveEventImage(event: EventItem): string | null {
-  // Prefer the curated local fallback for known event names. This prevents
-  // older seeded records from pointing at stale .png paths and guarantees the
-  // event cards use the photographs shipped with the current UI revision.
-  const lower = event.name.toLowerCase();
-  for (const [key, src] of Object.entries(EVENT_IMAGE_MAP)) {
-    if (lower.includes(key)) return src;
-  }
-
-  if (event.image_url) {
-    return event.image_url.replace(
-      /\/images\/event-(summertides|diani-beach|nairobi-run)\.png$/,
-      "/images/event-$1.jpg"
-    );
-  }
-  return null;
+  return event.image_url?.trim() || null;
 }
 
 export interface DriverPreview {
@@ -60,7 +38,8 @@ export function EventCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={bannerSrc}
-            alt=""
+            alt={`${event.name} event artwork`}
+            loading="lazy"
             className="h-full w-full object-cover"
           />
         ) : (
