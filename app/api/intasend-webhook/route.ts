@@ -86,13 +86,18 @@ export async function POST(request: Request) {
     }
 
     // Resolve the ride: api_ref first (ride id), then invoice_id via the
-    // checkoutRequests record we wrote at creation time.
+    // checkoutRequests record we wrote at creation time, then via the
+    // payments record an STK push writes.
     let rideId = pick(txn.api_ref)
     if (!rideId) {
       const invoiceId = pick(txn.invoice_id)
       if (invoiceId) {
         const req = await getRawDocument(`checkoutRequests/${invoiceId}`)
         rideId = typeof req?.rideId === "string" ? req.rideId : undefined
+        if (!rideId) {
+          const pmt = await getRawDocument(`payments/${invoiceId}`)
+          rideId = typeof pmt?.rideId === "string" ? pmt.rideId : undefined
+        }
       }
     }
     if (!rideId) {
@@ -104,12 +109,18 @@ export async function POST(request: Request) {
     try {
       const invoiceId = pick(txn.invoice_id)
       if (invoiceId) {
-        await setRawDocument(`checkoutRequests/${invoiceId}`, {
+        const patch = {
           state,
           provider: pick(txn.provider) ?? "",
           value: pick(txn.value) ?? "",
           updatedAt: new Date().toISOString(),
-        })
+        }
+        const pmt = await getRawDocument(`payments/${invoiceId}`)
+        if (pmt?.rideId) {
+          await setRawDocument(`payments/${invoiceId}`, patch)
+        } else {
+          await setRawDocument(`checkoutRequests/${invoiceId}`, patch)
+        }
       }
     } catch (err) {
       console.error("[intasend-webhook] audit write skipped", err)
