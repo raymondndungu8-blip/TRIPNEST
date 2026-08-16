@@ -10,7 +10,7 @@
  *    confirmations (delivered by the app's notification service).
  */
 
-const VERSION = "tripnest-v4-logo";
+const VERSION = "tripnest-v5-logo";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 
@@ -20,10 +20,10 @@ const SHELL_URLS = [
   "/offline",
   "/manifest.webmanifest",
   "/icon.svg",
-  "/apple-icon",
-  "/pwa/icon-192?v=2",
-  "/pwa/icon-512?v=2",
-  "/pwa/icon-maskable-512?v=2",
+  "/apple-icon?v=3",
+  "/pwa/icon-192?v=3",
+  "/pwa/icon-512?v=3",
+  "/pwa/icon-maskable-512?v=3",
 ];
 
 const OFFLINE_PAGE = "/offline";

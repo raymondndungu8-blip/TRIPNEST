@@ -13,7 +13,6 @@ export function GET() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#0b1220",
       }}
     >
       {/* Keep the artwork inside the maskable safe zone. */}

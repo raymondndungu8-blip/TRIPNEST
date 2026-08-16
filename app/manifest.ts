@@ -16,24 +16,24 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["travel", "navigation", "transportation"],
     icons: [
       {
-        src: "/pwa/icon-192?v=2",
+        src: "/pwa/icon-192?v=3",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/pwa/icon-512?v=2",
+        src: "/pwa/icon-512?v=3",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/pwa/icon-maskable-512?v=2",
+        src: "/pwa/icon-maskable-512?v=3",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
       },
-      { src: "/apple-icon", type: "image/png", sizes: "180x180" },
+      { src: "/apple-icon?v=3", type: "image/png", sizes: "180x180" },
     ],
     shortcuts: [
       {
@@ -41,14 +41,14 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: "Book",
         description: "Request a scheduled ride",
         url: "/client",
-        icons: [{ src: "/pwa/icon-192?v=2", sizes: "192x192" }],
+        icons: [{ src: "/pwa/icon-192?v=3", sizes: "192x192" }],
       },
       {
         name: "Driver mode",
         short_name: "Drive",
         description: "Go online and accept requests",
         url: "/driver",
-        icons: [{ src: "/pwa/icon-192?v=2", sizes: "192x192" }],
+        icons: [{ src: "/pwa/icon-192?v=3", sizes: "192x192" }],
       },
     ],
   };
