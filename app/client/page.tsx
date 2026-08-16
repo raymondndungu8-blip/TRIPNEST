@@ -51,7 +51,7 @@ import { createRide, cancelRide, sendRideCodeWhatsApp } from "@/lib/rides";
 import { addFavorite, removeFavorite } from "@/lib/favorites";
 import { notifyAvailableDrivers } from "@/lib/notify";
 import { getCurrentLocationLabel, geocode, getRoute, type LngLat } from "@/lib/geo";
-import { flatRate, perPersonFare, VEHICLE_SEATS } from "@/lib/pricing";
+import { perPersonFareFromEstimate, VEHICLE_SEATS } from "@/lib/pricing";
 import { Spinner } from "@/components/ui/spinner";
 import { cn, formatKES, friendlyErrorMessage } from "@/lib/utils";
 import type {
@@ -587,7 +587,7 @@ function ClientDashboard() {
 
   const vehicles = VEHICLE_META.map((v) => ({
     ...v,
-    price: perPersonFare(v.category, rideType, passengers),
+    price: perPersonFareFromEstimate(v.category, rideType, passengers, estimate),
   }));
   const selected = vehicles.find((v) => v.category === selectedVehicle) ?? vehicles[0];
 
@@ -640,6 +640,15 @@ function ClientDashboard() {
         return;
       }
     }
+    if (!estimate) {
+      toast(
+        estimating
+          ? "Calculating your fare — please wait a moment"
+          : "We could not calculate a route for that destination",
+        "warning"
+      );
+      return;
+    }
     if (rideType === "cost_sharing" && passengers > VEHICLE_SEATS[selectedVehicle]) {
       toast(`This vehicle only fits ${VEHICLE_SEATS[selectedVehicle]} people`, "warning");
       return;
@@ -648,7 +657,16 @@ function ClientDashboard() {
       toast("Location names must be under 200 characters", "warning");
       return;
     }
-    const finalBudget = flatRate(selectedVehicle, rideType);
+    const finalBudget = perPersonFareFromEstimate(
+      selectedVehicle,
+      rideType,
+      passengers,
+      estimate
+    );
+    if (finalBudget === null) {
+      toast("Enter a destination so we can calculate the fare", "warning");
+      return;
+    }
     setSubmitting(true);
     try {
       const ride = await createRide({
@@ -1003,7 +1021,7 @@ function ClientDashboard() {
               </div>
               <div className="text-right">
                 <p className="font-display font-bold text-foreground">
-                  {showPrice ? formatKES(v.price) : "—"}
+                  {showPrice && v.price !== null ? formatKES(v.price) : "—"}
                 </p>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   {showPrice
@@ -1024,12 +1042,21 @@ function ClientDashboard() {
       <div className="sticky bottom-24 z-10 -mx-1 mt-2 rounded-2xl border border-cyan-400/10 bg-[#060a13]/85 p-2 backdrop-blur-xl">
         <div className="mb-2 flex items-center justify-between px-1.5 text-xs">
           <span className="text-muted-foreground">{selected.name}</span>
-          <span className="font-semibold text-foreground">{formatKES(selected.price)} estimated</span>
+          <span className="font-semibold text-foreground">
+            {showPrice && selected.price !== null
+              ? `${formatKES(selected.price)} estimated`
+              : estimating
+                ? "Calculating fare…"
+                : mode === "schedule" && !scheduledAtValue
+                  ? "Add date & time to estimate"
+                  : "Add destination to estimate"}
+          </span>
         </div>
         <Button
           size="lg"
           fullWidth
           loading={submitting}
+          disabled={!showPrice || !estimate || estimating}
           onClick={handleConfirm}
           className="h-12 rounded-xl bg-accent text-[13px] font-bold uppercase tracking-[0.08em] text-[#06101c] shadow-[0_10px_28px_rgba(0,212,255,0.2)] hover:bg-cyan-300"
         >

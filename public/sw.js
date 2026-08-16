@@ -10,7 +10,7 @@
  *    confirmations (delivered by the app's notification service).
  */
 
-const VERSION = "tripnest-v2";
+const VERSION = "tripnest-v3-logo";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 

@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { markSvg } from "@/lib/brand-svg";
+import { logoDataUri } from "@/lib/logo-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-static";
@@ -13,23 +13,21 @@ export function GET() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-          background: "#0b1220",
+        background: "#0b1220",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          width: 184,
-          height: 184,
-          backgroundImage: `url("data:image/svg+xml;base64,${Buffer.from(
-            markSvg(48)
-          ).toString("base64")}")`,
-          backgroundSize: "184px 184px",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center",
-        }}
+      <img
+        src={logoDataUri()}
+        width={352}
+        height={372}
+        style={{ objectFit: "contain" }}
+        alt="TripNest"
       />
     </div>,
-    { width: 512, height: 512, headers: { "Cache-Control": "public, max-age=31536000, immutable" } }
+    {
+      width: 512,
+      height: 512,
+      headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+    }
   );
 }

@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { markDataUri } from "@/lib/brand-svg";
+import { logoDataUri } from "@/lib/logo-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-static";
@@ -19,10 +19,18 @@ export default function AppleIcon() {
           background: "#0b1220",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={markDataUri(92)} width={92} height={92} alt="TripNest" />
+        <img
+          src={logoDataUri()}
+          width={124}
+          height={131}
+          style={{ objectFit: "contain" }}
+          alt="TripNest"
+        />
       </div>
     ),
-    { ...size, headers: { "Cache-Control": "public, max-age=31536000, immutable" } }
+    {
+      ...size,
+      headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+    }
   );
 }

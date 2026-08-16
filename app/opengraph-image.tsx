@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
-import { markDataUri, carDataUri, BRAND } from "@/lib/brand-svg";
+import { carDataUri, BRAND } from "@/lib/brand-svg";
+import { logoDataUri } from "@/lib/logo-data";
 
 export const runtime = "nodejs";
 export const alt = "TripNest — Better the driver you know.";
@@ -47,7 +48,13 @@ export default async function OgImage() {
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={markDataUri(104)} width={104} height={104} alt="" />
+          <img
+            src={logoDataUri()}
+            width={104}
+            height={110}
+            style={{ objectFit: "contain" }}
+            alt="TripNest"
+          />
           <div
             style={{
               display: "flex",

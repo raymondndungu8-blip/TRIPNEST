@@ -67,6 +67,26 @@ export function perPersonFare(
 }
 
 /**
+ * Calculate the client-facing fare from a resolved road estimate.
+ * Returns null until a destination route has been calculated, so the UI never
+ * shows a placeholder fare before the rider enters a destination.
+ */
+export function perPersonFareFromEstimate(
+  category: VehicleCategory,
+  rideType: RideType,
+  passengers: number,
+  estimate: TripEstimate | null
+): number | null {
+  if (!estimate) return null;
+
+  const total = computeFare(category, estimate.distanceKm, estimate.durationMin);
+  if (rideType !== "cost_sharing") return total;
+
+  const n = Math.max(1, Math.min(passengers, VEHICLE_SEATS[category]));
+  return Math.ceil(total / n / 10) * 10;
+}
+
+/**
  * Fare model per vehicle tier (KES).
  * Based on Nov-2025 mandated Uber/Bolt Kenya rate research.
  */

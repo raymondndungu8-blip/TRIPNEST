@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { markSvg } from "@/lib/brand-svg";
+import { logoDataUri } from "@/lib/logo-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-static";
@@ -13,25 +13,22 @@ export function GET() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-          background: "#0b1220",
+        background: "#0b1220",
       }}
     >
-      {/* Maskable artwork must be centered within the safe zone (80% of the
-          canvas) so circular/rounded masks don't clip it. */}
-      <div
-        style={{
-          display: "flex",
-          width: 280,
-          height: 280,
-          backgroundImage: `url("data:image/svg+xml;base64,${Buffer.from(
-            markSvg(48)
-          ).toString("base64")}")`,
-          backgroundSize: "280px 280px",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center",
-        }}
+      {/* Keep the artwork inside the maskable safe zone. */}
+      <img
+        src={logoDataUri()}
+        width={280}
+        height={296}
+        style={{ objectFit: "contain" }}
+        alt="TripNest"
       />
     </div>,
-    { width: 512, height: 512, headers: { "Cache-Control": "public, max-age=31536000, immutable" } }
+    {
+      width: 512,
+      height: 512,
+      headers: { "Cache-Control": "public, max-age=31536000, immutable" },
+    }
   );
 }
