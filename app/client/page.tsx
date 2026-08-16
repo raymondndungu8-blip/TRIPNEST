@@ -43,6 +43,7 @@ import { FadeIn, StaggerList, MotionItem, fadeUp } from "@/components/motion/mot
 import { RideMap } from "@/components/ride/ride-map-dynamic";
 import { DriverMap } from "@/components/client/driver-map-dynamic";
 import { ActiveRideTracker } from "@/components/ride/active-ride-tracker";
+import { PayWithLinkButton } from "@/components/ride/pay-with-link-button";
 import { RatingModal } from "@/components/rating/rating-modal";
 import { RequireRole } from "@/components/auth/require-role";
 import { DriverListItem } from "@/components/client/driver-list-item";
@@ -333,24 +334,41 @@ function YourRides({ client }: { client: Client }) {
     }
     if (ride.payment_status === "pending") {
       return (
-        <div className="flex items-center gap-2 rounded-xl border border-warning/25 bg-warning/10 px-3.5 py-2.5 text-sm text-warning">
-          <Smartphone className="h-4 w-4" />
-          Enter your M-Pesa PIN on your phone to pay {formatKES(ride.budget)}.
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 rounded-xl border border-warning/25 bg-warning/10 px-3.5 py-2.5 text-sm text-warning">
+            <Smartphone className="h-4 w-4 shrink-0" />
+            Enter your M-Pesa PIN on your phone to pay {formatKES(ride.budget)}.
+          </div>
+          <PayWithLinkButton
+            rideId={ride.id}
+            amount={ride.budget}
+            label="Pay with a card or M-Pesa link instead"
+          />
         </div>
       );
     }
     if (ride.payment_status === "failed") {
       return (
-        <p className="rounded-xl border border-destructive/25 bg-destructive/10 px-3.5 py-2.5 text-xs text-destructive">
-          Payment didn&apos;t go through — your driver can request it again.
-        </p>
+        <div className="space-y-2">
+          <p className="rounded-xl border border-destructive/25 bg-destructive/10 px-3.5 py-2.5 text-xs text-destructive">
+            Payment didn&apos;t go through — try again with a card or M-Pesa.
+          </p>
+          <PayWithLinkButton
+            rideId={ride.id}
+            amount={ride.budget}
+            label="Try payment again"
+          />
+        </div>
       );
     }
-    // unpaid, trip in progress — payment is requested by the driver on arrival
+    // unpaid — the rider can settle via an IntaSend payment link (M-Pesa/card)
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-2/40 px-3.5 py-2.5 text-xs text-muted-foreground">
-        <Spinner className="h-4 w-4 text-accent" />
-        Trip in progress — you&apos;ll get an M-Pesa prompt on arrival.
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-2/40 px-3.5 py-2.5 text-xs text-muted-foreground">
+          <Spinner className="h-4 w-4 text-accent" />
+          Not settled yet — pay with M-Pesa or a card.
+        </div>
+        <PayWithLinkButton rideId={ride.id} amount={ride.budget} />
       </div>
     );
   }

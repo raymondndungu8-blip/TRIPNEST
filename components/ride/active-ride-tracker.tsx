@@ -18,6 +18,7 @@ import { db } from "@/lib/firestore";
 import { RideMap } from "@/components/ride/ride-map-dynamic";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { PayWithLinkButton } from "@/components/ride/pay-with-link-button";
 import { isPositionFresh, type LivePosition } from "@/lib/location";
 import { formatKES } from "@/lib/utils";
 import type { RideWithRelations } from "@/lib/types";
@@ -297,9 +298,25 @@ export function ActiveRideTracker({
 
       {/* Payment status for in_progress */}
       {ride.status === "in_progress" && ride.payment_status === "pending" && (
-        <div className="mx-4 mt-3 flex items-center gap-2 rounded-xl border border-warning/25 bg-warning/10 px-3.5 py-2.5 text-sm text-warning">
-          <Clock className="h-4 w-4" />
-          Enter your M-Pesa PIN to pay {formatKES(ride.budget)}
+        <div className="mx-4 mt-3 space-y-2">
+          <div className="flex items-center gap-2 rounded-xl border border-warning/25 bg-warning/10 px-3.5 py-2.5 text-sm text-warning">
+            <Clock className="h-4 w-4 shrink-0" />
+            Enter your M-Pesa PIN to pay {formatKES(ride.budget)}
+          </div>
+          <PayWithLinkButton
+            rideId={ride.id}
+            amount={ride.budget}
+            label="Pay with a card or M-Pesa link instead"
+          />
+        </div>
+      )}
+      {ride.status === "in_progress" && ride.payment_status === "unpaid" && (
+        <div className="mx-4 mt-3 space-y-2">
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-2/40 px-3.5 py-2.5 text-xs text-muted-foreground">
+            <Clock className="h-4 w-4 shrink-0 text-accent" />
+            Pay with M-Pesa or a card before arrival.
+          </div>
+          <PayWithLinkButton rideId={ride.id} amount={ride.budget} />
         </div>
       )}
 
