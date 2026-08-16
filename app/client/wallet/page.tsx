@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Smartphone,
@@ -19,6 +19,10 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { RequireRole } from "@/components/auth/require-role";
 import { useSession } from "@/components/providers/session-provider";
+import { useClientRides } from "@/hooks/use-rides";
+import { docs, patchDocument } from "@/lib/db";
+import { formatKES } from "@/lib/utils";
+import type { Client } from "@/lib/types";
 
 interface PaymentMethod {
   id: string;
@@ -29,34 +33,44 @@ interface PaymentMethod {
   verified: boolean;
 }
 
-const MOCK_METHODS: PaymentMethod[] = [
-  {
-    id: "mpesa-1",
-    type: "mpesa",
-    label: "M-Pesa",
-    detail: "+254 7XX XXX 123",
-    isDefault: true,
-    verified: true,
-  },
-];
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  const today = new Date();
+  const sameDay =
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate();
+  if (sameDay) {
+    return `Today, ${d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+  }
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
 
-const RECENT_TXNS = [
-  { id: "1", label: "Ride to Westlands", amount: 450, date: "Today, 2:30 PM", status: "paid" as const },
-  { id: "2", label: "Ride to Airport", amount: 1200, date: "Yesterday, 8:15 AM", status: "paid" as const },
-  { id: "3", label: "Ride to CBD", amount: 300, date: "Jul 22, 6:45 PM", status: "paid" as const },
-];
-
-function AddMethodModal({ onClose }: { onClose: () => void }) {
+function AddMethodModal({
+  clientId,
+  onLinked,
+  onClose,
+}: {
+  clientId: string;
+  onLinked: (phone: string) => void;
+  onClose: () => void;
+}) {
   const [step, setStep] = useState<"choose" | "mpesa" | "done">("choose");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleVerifyMpesa() {
-    if (!phone.trim()) return;
+    if (!phone.trim() || !clientId) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setLoading(false);
-    setStep("done");
+    try {
+      await patchDocument(docs.client(clientId), { phone: `+254${phone}` });
+      onLinked(`+254${phone}`);
+      setLoading(false);
+      setStep("done");
+    } catch {
+      setLoading(false);
+    }
   }
 
   return (
@@ -203,10 +217,67 @@ function AddMethodModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function WalletContent() {
-  const { client } = useSession();
-  const [methods, setMethods] = useState<PaymentMethod[]>(MOCK_METHODS);
+function WalletContent({ client }: { client: Client }) {
+  const { setClient } = useSession();
   const [showAdd, setShowAdd] = useState(false);
+  const { rides } = useClientRides(client.id);
+
+  const methods = useMemo<PaymentMethod[]>(() => {
+    if (client.phone) {
+      return [
+        {
+          id: "mpesa-linked",
+          type: "mpesa",
+          label: "M-Pesa",
+          detail: `+${client.phone.replace(/\D/g, "")}`,
+          isDefault: true,
+          verified: true,
+        },
+      ];
+    }
+    return [
+      {
+        id: "mpesa-add",
+        type: "mpesa",
+        label: "M-Pesa",
+        detail: "Link a number to pay for rides",
+        isDefault: true,
+        verified: false,
+      },
+    ];
+  }, [client.phone]);
+
+  const transactions = useMemo(
+    () =>
+      rides
+        .filter((r) => r.status === "completed" && r.payment_status === "paid")
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        .map((r) => ({
+          id: r.id,
+          label: `Ride to ${r.destination}`,
+          amount: r.budget,
+          date: formatDate(r.created_at),
+          status: "paid" as const,
+        })),
+    [rides]
+  );
+
+  const totalSpent = useMemo(
+    () =>
+      rides
+        .filter((r) => r.status === "completed" && r.payment_status === "paid")
+        .reduce((sum, r) => sum + (r.budget ?? 0), 0),
+    [rides]
+  );
+
+  function handleLinked(phone: string) {
+    setClient({ ...client, phone });
+    setShowAdd(false);
+  }
 
   return (
     <AppShell>
@@ -230,12 +301,12 @@ function WalletContent() {
             <Wallet className="h-5 w-5 text-accent" />
           </div>
           <div>
-            <p className="text-xs font-medium text-muted-foreground">TripNest Credit</p>
-            <p className="text-3xl font-extrabold tabular-nums tracking-tight text-foreground">KES 0.00</p>
+            <p className="text-xs font-medium text-muted-foreground">Total spent on rides</p>
+            <p className="text-3xl font-extrabold tabular-nums tracking-tight text-foreground">{formatKES(totalSpent)}</p>
           </div>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          Add credit for instant ride payments. You can also pay directly via M-Pesa STK prompt at ride end.
+          Ride payments are settled via M-Pesa STK prompt at the end of every trip.
         </p>
       </motion.div>
 
@@ -306,7 +377,16 @@ function WalletContent() {
         </div>
 
         <div className="mt-3 space-y-2">
-          {RECENT_TXNS.map((tx) => (
+          {transactions.length === 0 && (
+            <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-surface/40 py-8 text-center">
+              <AlertCircle className="mb-2 h-7 w-7 text-muted-foreground/30" />
+              <p className="text-sm font-medium text-muted-foreground">No paid rides yet</p>
+              <p className="mt-1 text-xs text-muted-foreground/70">
+                Completed and paid trips will appear here
+              </p>
+            </div>
+          )}
+          {transactions.map((tx) => (
             <div
               key={tx.id}
               className="flex items-center justify-between rounded-2xl border border-border bg-surface-2/30 px-4 py-3"
@@ -316,7 +396,7 @@ function WalletContent() {
                 <p className="text-xs text-muted-foreground">{tx.date}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold text-foreground">KES {tx.amount}</p>
+                <p className="text-sm font-bold text-foreground">{formatKES(tx.amount)}</p>
                 <span className="text-[10px] font-medium uppercase text-[#4CAF50]">{tx.status}</span>
               </div>
             </div>
@@ -346,7 +426,13 @@ function WalletContent() {
       </div>
 
       <AnimatePresence>
-        {showAdd && <AddMethodModal onClose={() => setShowAdd(false)} />}
+        {showAdd && (
+          <AddMethodModal
+            clientId={client.id}
+            onLinked={handleLinked}
+            onClose={() => setShowAdd(false)}
+          />
+        )}
       </AnimatePresence>
     </AppShell>
   );
@@ -355,7 +441,13 @@ function WalletContent() {
 export default function WalletPage() {
   return (
     <RequireRole role="client">
-      <WalletContent />
+      <WalletContentWrapper />
     </RequireRole>
   );
+}
+
+function WalletContentWrapper() {
+  const { client } = useSession();
+  if (!client) return null;
+  return <WalletContent client={client} />;
 }

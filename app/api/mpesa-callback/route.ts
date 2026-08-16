@@ -2,8 +2,10 @@ import { NextResponse } from "next/server"
 import {
   getRawDocument,
   isAdminConfigured,
+  readPushSubscription,
   setRawDocument,
 } from "@/lib/server/firebase-rest"
+import { sendPushToSubscription } from "@/lib/server/webpush"
 
 export const runtime = "nodejs"
 
@@ -79,6 +81,33 @@ export async function POST(request: Request) {
             }
           : { paymentStatus: "failed" }
       await setRawDocument(`rides/${rideId}`, rideDone)
+
+      // Let the rider know their trip is paid and done. Best-effort: a hiccup
+      // here (VAPID unset, no stored subscription, retired endpoint) must
+      // never affect the 200 Safaricom needs back.
+      if (status === "paid") {
+        try {
+          const ride = await getRawDocument(`rides/${rideId}`)
+          const clientId =
+            typeof ride?.clientId === "string"
+              ? ride.clientId
+              : typeof ride?.client_id === "string"
+                ? ride.client_id
+                : null
+          if (clientId) {
+            const sub = await readPushSubscription(clientId)
+            if (sub) {
+              await sendPushToSubscription(sub, {
+                title: "TripNest — Payment received",
+                body: `Your ride is complete. M-Pesa receipt ${receipt ?? "received"} — see the app for details.`,
+                url: "/client",
+              })
+            }
+          }
+        } catch (err) {
+          console.error("[mpesa-callback] push skipped", err)
+        }
+      }
     }
 
     return NextResponse.json({ ResultCode: 0, ResultDesc: "Accepted" })

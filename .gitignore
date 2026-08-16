@@ -10,6 +10,7 @@ npm-debug.log*
 next-env.d.ts
 legacy
 dev-server.log
+dev-server.err.log
 
 .vercel
 .env*

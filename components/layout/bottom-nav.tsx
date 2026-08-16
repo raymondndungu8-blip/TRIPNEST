@@ -19,6 +19,7 @@ const DRIVER_TABS = [
   { href: "/driver", label: "Home", icon: Home },
   { href: "/driver/trips", label: "Trips", icon: Route },
   { href: "/driver/inbox", label: "Inbox", icon: MessageCircle },
+  { href: "/driver/wallet", label: "Earnings", icon: Wallet },
   { href: "/driver/profile", label: "Profile", icon: UserCircle },
 ];
 
