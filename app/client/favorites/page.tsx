@@ -607,8 +607,9 @@ function BecomeDriverPanel({
         </div>
         <p className="mt-1.5 text-xs text-muted-foreground">
           Keep your rider account and start accepting ride requests to make extra
-          income. You can switch between rider and driver mode anytime. You'll
-          need scans of your driving licence and National ID.
+          income. You can switch between rider and driver mode anytime. Driving
+          licence and National ID scans are optional while TripNest is in testing
+          — you can add them later from your profile.
         </p>
       </div>
 

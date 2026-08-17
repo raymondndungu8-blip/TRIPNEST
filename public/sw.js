@@ -9,7 +9,7 @@
  *  - Push: fire a notification for ride requests, messages and payment
  *    confirmations (delivered by the app's notification service).
  */
-const VERSION = "tripnest-v6-skeleton";
+const VERSION = "tripnest-v7-network-first";
 
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
@@ -69,13 +69,14 @@ this.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // App pages: cache-first, refresh in the background. Repeat opens are
-  // instant; the first paint is the shell and data re-fetches via client JS.
+  // App pages: network-first with the shell as fallback. Always try the server
+  // so fresh builds take effect on the next reload (otherwise a stale cached
+  // shell keeps shipping old UI). Falls back to the cached shell / offline page
+  // when unreachable.
   if (request.mode === "navigate") {
     event.respondWith(
       (async () => {
         const cache = await caches.open(SHELL_CACHE);
-        const cached = (await cache.match(request)) || (await cache.match("/"));
         const network = fetch(request)
           .then((response) => {
             if (response && response.status === 200) {
@@ -84,12 +85,9 @@ this.addEventListener("fetch", (event) => {
             return response;
           })
           .catch(() => null);
-        if (cached) {
-          // Don't block the paint on a network round-trip.
-          network.then(() => {});
-          return cached;
-        }
-        return network || caches.match(OFFLINE_PAGE);
+        if (network) return network;
+        const cached = (await cache.match(request)) || (await cache.match("/"));
+        return cached || caches.match(OFFLINE_PAGE);
       })(),
     );
     return;
