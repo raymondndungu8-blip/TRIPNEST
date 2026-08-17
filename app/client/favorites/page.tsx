@@ -23,6 +23,10 @@ import {
   CheckCircle2,
   MessageCircle,
   ChevronDown,
+  LockKeyhole,
+  ExternalLink,
+  Zap,
+  X,
   Car,
   FileText,
   Ban,
@@ -174,6 +178,18 @@ function PersonalInfoPanel({
 
 /* ── Payment Methods ──────────────────────────────────── */
 
+function normalizeKenyanPhone(value: string): string {
+  let digits = value.replace(/\D/g, "");
+  if (digits.startsWith("254")) digits = digits.slice(3);
+  if (digits.startsWith("0")) digits = digits.slice(1);
+  return digits.length === 9 ? `254${digits}` : "";
+}
+
+function displayKenyanPhone(value: string): string {
+  const normalized = normalizeKenyanPhone(value);
+  return normalized ? `+${normalized}` : value || "No phone linked";
+}
+
 function PaymentPanel({
   client,
   onBack,
@@ -181,77 +197,160 @@ function PaymentPanel({
   client: Client;
   onBack: () => void;
 }) {
+  const { setClient } = useSession();
+  const { toast } = useToast();
+  const [step, setStep] = useState<"list" | "mpesa" | "card" | "done">("list");
+  const [phone, setPhone] = useState(displayKenyanPhone(client.mpesa_phone ?? client.phone));
+  const [cardReady, setCardReady] = useState(client.card_ready);
+  const [saving, setSaving] = useState(false);
+  const [savedMethod, setSavedMethod] = useState<"mpesa" | "card">("mpesa");
+
+  async function saveMpesa() {
+    const normalized = normalizeKenyanPhone(phone);
+    if (!normalized) {
+      toast("Enter a valid Kenyan number, for example 0712 345 678", "warning");
+      return;
+    }
+    setSaving(true);
+    try {
+      await patchDocument(docs.client(client.id), { mpesaPhone: normalized });
+      setClient({ ...client, mpesa_phone: normalized, card_ready: cardReady });
+      setSavedMethod("mpesa");
+      setStep("done");
+      toast("M-PESA number updated", "success");
+    } catch {
+      toast("Could not save your M-PESA number", "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function enableCardCheckout() {
+    setSaving(true);
+    try {
+      await patchDocument(docs.client(client.id), { cardReady: true });
+      setCardReady(true);
+      setClient({ ...client, mpesa_phone: client.mpesa_phone ?? null, card_ready: true });
+      setSavedMethod("card");
+      setStep("done");
+      toast("IntaSend card checkout enabled", "success");
+    } catch {
+      toast("Could not enable card checkout", "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (step === "mpesa") {
+    return (
+      <>
+        <PanelHeader title="M-PESA" onBack={() => setStep("list")} />
+        <div className="space-y-5">
+          <div className="rounded-2xl bg-[#4CAF50]/10 p-4">
+            <div className="flex items-start gap-3">
+              <Shield className="mt-0.5 h-5 w-5 shrink-0 text-[#4CAF50]" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Update your M-PESA number</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  This number receives the IntaSend STK prompt after the driver confirms the ride. Saving it does not charge you.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="setup_mpesa_phone">M-PESA phone number</label>
+            <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface-2/50 px-4 py-3 focus-within:border-accent/60">
+              <span className="text-sm font-medium text-muted-foreground">+254</span>
+              <input
+                id="setup_mpesa_phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={phone.replace(/^\+254/, "")}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                placeholder="712 345 678"
+                className="input-transparent flex-1 bg-transparent text-sm focus:outline-none"
+              />
+            </div>
+          </div>
+          <Button fullWidth size="lg" loading={saving} disabled={phone.replace(/\D/g, "").length !== 9} onClick={saveMpesa}>
+            <Zap className="h-4 w-4" />
+            Save M-PESA Number
+          </Button>
+        </div>
+      </>
+    );
+  }
+
+  if (step === "card") {
+    return (
+      <>
+        <PanelHeader title="Credit / Debit Card" onBack={() => setStep("list")} />
+        <div className="space-y-5">
+          <div className="rounded-2xl bg-primary-soft p-4">
+            <div className="flex items-start gap-3">
+              <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Secure card details with IntaSend</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Your full card number and CVV are entered on IntaSend&apos;s secure hosted checkout. TripNest does not store sensitive card details.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border bg-surface-2/40 p-4">
+            <div className="flex items-center gap-2 text-foreground"><CardIcon className="h-4 w-4 text-accent" /><span className="text-sm font-semibold">{cardReady ? "Card checkout is active" : "Card checkout is ready"}</span></div>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">When you pay for a ride, TripNest opens IntaSend where you can enter Visa, Mastercard, or another supported card.</p>
+          </div>
+          <Button fullWidth size="lg" loading={saving} onClick={enableCardCheckout}>
+            <ExternalLink className="h-4 w-4" />
+            {cardReady ? "Keep Card Checkout Active" : "Activate Card Checkout"}
+          </Button>
+        </div>
+      </>
+    );
+  }
+
+  if (step === "done") {
+    return (
+      <>
+        <PanelHeader title="Payment Methods" onBack={() => setStep("list")} />
+        <div className="flex flex-col items-center py-10 text-center">
+          <div className="mb-4 grid h-16 w-16 place-items-center rounded-full bg-success/15"><CheckCircle2 className="h-8 w-8 text-success" /></div>
+          <p className="font-display text-lg font-bold text-foreground">Payment method updated</p>
+          <p className="mt-1 text-sm text-muted-foreground">{savedMethod === "mpesa" ? `M-PESA ${displayKenyanPhone(phone)} is ready for STK prompts.` : "Secure IntaSend card checkout is now active."}</p>
+          <Button fullWidth size="lg" onClick={() => setStep("list")} className="mt-6">Done</Button>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <PanelHeader title="Payment Methods" onBack={onBack} />
       <div className="space-y-3">
-        {/* M-Pesa */}
-        <div className="rounded-2xl border border-accent/30 bg-accent/5 p-4">
+        <button type="button" onClick={() => setStep("mpesa")} className="w-full rounded-2xl border border-accent/30 bg-accent/5 p-4 text-left transition-colors hover:border-accent/60">
           <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#4CAF50]/20">
-              <Smartphone className="h-5 w-5 text-[#4CAF50]" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-foreground">M-Pesa</p>
-                <span className="rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold uppercase text-success">
-                  Active
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {client.phone || "No phone linked"}
-              </p>
-            </div>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#4CAF50]/20"><Smartphone className="h-5 w-5 text-[#4CAF50]" /></span>
+            <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="font-semibold text-foreground">M-PESA</p><span className="rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold uppercase text-success">Active</span></div><p className="text-sm text-muted-foreground">{client.mpesa_phone ? displayKenyanPhone(client.mpesa_phone) : client.phone ? displayKenyanPhone(client.phone) : "No phone linked — tap to add"}</p></div>
             <CheckCircle2 className="h-5 w-5 text-success" />
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            M-Pesa STK push will be sent to your phone when the driver confirms
-            arrival at your destination.
-          </p>
-        </div>
+          <p className="mt-3 text-xs text-muted-foreground">Tap to add or change the number that receives the IntaSend M-PESA STK prompt.</p>
+        </button>
 
-        {/* Card */}
-        <div className="rounded-2xl border border-border bg-surface-2/40 p-4 opacity-60">
+        <button type="button" onClick={() => setStep("card")} className="w-full rounded-2xl border border-accent/30 bg-surface-2/40 p-4 text-left transition-colors hover:border-accent/60">
           <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-surface-2">
-              <CardIcon className="h-5 w-5 text-muted-foreground" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-foreground">
-                  Credit / Debit Card
-                </p>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
-                  Coming Soon
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Visa, Mastercard, and more
-              </p>
-            </div>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary-soft"><CardIcon className="h-5 w-5 text-accent" /></span>
+            <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="font-semibold text-foreground">Credit / Debit Card</p><span className="rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold uppercase text-success">Active</span></div><p className="text-sm text-muted-foreground">{cardReady ? "Secure IntaSend checkout enabled" : "Tap to add a card through IntaSend"}</p></div>
+            <CheckCircle2 className="h-5 w-5 text-success" />
           </div>
-        </div>
+          <p className="mt-3 text-xs text-muted-foreground">Tap to activate secure card checkout. Card details are entered on IntaSend, not stored in TripNest.</p>
+        </button>
 
-        {/* PayPal */}
         <div className="rounded-2xl border border-border bg-surface-2/40 p-4 opacity-60">
           <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-surface-2">
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
-                <path d="M7.02 21.5 8 16.5h2.5c4.5 0 7.5-2.5 8.2-6.5.7-4-1.7-6-5.7-6H7.5c-.5 0-1 .4-1.1.9L4 21.1c-.1.3.2.4.4.4h2.6Z" fill="#7a8ba3"/>
-                <path d="M9 13.5l.7-4h2.3c2.5 0 4.2-1.2 4.7-3.5.5-2.3-1-3.5-3.2-3.5H9.2l-2 11h1.8Z" fill="#5a6b83"/>
-              </svg>
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-foreground">PayPal</p>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
-                  Coming Soon
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Pay with your PayPal account
-              </p>
-            </div>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-surface-2"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M7.02 21.5 8 16.5h2.5c4.5 0 7.5-2.5 8.2-6.5.7-4-1.7-6-5.7-6H7.5c-.5 0-1 .4-1.1.9L4 21.1c-.1.3.2.4.4.4h2.6Z" fill="#7a8ba3"/><path d="M9 13.5l.7-4h2.3c2.5 0 4.2-1.2 4.7-3.5.5-2.3-1-3.5-3.2-3.5H9.2l-2 11h1.8Z" fill="#5a6b83"/></svg></span>
+            <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="font-semibold text-foreground">PayPal</p><span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">Coming Soon</span></div><p className="text-sm text-muted-foreground">Pay with your PayPal account</p></div>
           </div>
         </div>
       </div>
