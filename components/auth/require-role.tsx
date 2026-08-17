@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/session-provider";
-import { FullPageSpinner } from "@/components/ui/spinner";
+import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 import type { Role } from "@/lib/types";
 
 /**
@@ -27,7 +27,7 @@ export function RequireRole({
     }
   }, [loading, record, role, router]);
 
-  if (loading) return <FullPageSpinner label="Loading your account…" />;
-  if (!record) return <FullPageSpinner label="Redirecting…" />;
+  if (loading) return <DashboardSkeleton />;
+  if (!record) return <DashboardSkeleton />;
   return <>{children}</>;
 }

@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description:
       "Pre-order drivers for scheduled rides, airport pickups, event travel, and shared rides.",
     id: "/",
-    start_url: "/",
+    start_url: "/auth/callback",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

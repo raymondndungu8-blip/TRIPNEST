@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { FadeIn } from "@/components/motion/motion";
-import { FullPageSpinner } from "@/components/ui/spinner";
+import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { EmergencyContactField } from "@/components/client/emergency-contact-field";
 import { useSession } from "@/components/providers/session-provider";
@@ -155,7 +155,7 @@ export default function ClientSignupPage() {
     }
   }
 
-  if (loading || (user && !client)) return <FullPageSpinner label="Setting up your account…" />;
+  if (loading || (user && !client)) return <DashboardSkeleton />;
 
   return (
     <AppShell withNav={false}>

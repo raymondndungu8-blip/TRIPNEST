@@ -9,13 +9,14 @@
  *  - Push: fire a notification for ride requests, messages and payment
  *    confirmations (delivered by the app's notification service).
  */
+const VERSION = "tripnest-v6-skeleton";
 
-const VERSION = "tripnest-v5-logo";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 
 const SHELL_URLS = [
   "/",
+  "/auth/callback",
   "/login",
   "/offline",
   "/manifest.webmanifest",

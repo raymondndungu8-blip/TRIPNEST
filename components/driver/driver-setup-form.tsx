@@ -39,6 +39,11 @@ interface PickedPhoto {
   name: string;
 }
 
+// TEST MODE: document scans (licence front/back + National ID) are optional so
+// a driver account can be created quickly to test the booking/payment flow.
+// Set to `true` to make them mandatory again before going live.
+const DOCUMENTS_REQUIRED = false;
+
 /**
  * Full driver onboarding form — shared by the phone-OTP driver signup and the
  * client's "Become a Driver" panel. Collects profile + vehicle photo, seat
@@ -94,9 +99,11 @@ export function DriverSetupForm({
       next.frequentLocation = "Frequent location is required";
     else if (frequentLocation.trim().length > 200)
       next.frequentLocation = "Too long (max 200)";
-    if (!licenseFront) next.licenseFront = "Scan the front of your licence";
-    if (!licenseBack) next.licenseBack = "Scan the back of your licence";
-    if (!nationalId) next.nationalId = "Scan your National ID";
+    if (DOCUMENTS_REQUIRED) {
+      if (!licenseFront) next.licenseFront = "Scan the front of your licence";
+      if (!licenseBack) next.licenseBack = "Scan the back of your licence";
+      if (!nationalId) next.nationalId = "Scan your National ID";
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -139,7 +146,7 @@ export function DriverSetupForm({
         licenseFrontUrl,
         licenseBackUrl,
         nationalIdUrl,
-        documentsSubmitted: true,
+        documentsSubmitted: !!(licenseFrontUrl && licenseBackUrl && nationalIdUrl),
         ratingAvg: null,
         ratingCount: 0,
         createdAt: Timestamp.now(),
@@ -296,14 +303,15 @@ export function DriverSetupForm({
           <p className="text-sm font-semibold">Required documents</p>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Scans of both sides of your driving licence and your National ID —
-          these are required to drive on TripNest.
+          {DOCUMENTS_REQUIRED
+            ? "Scans of both sides of your driving licence and your National ID — these are required to drive on TripNest."
+            : "Scans of your driving licence and National ID are optional right now while TripNest is in testing. You can add them later from your profile."}
         </p>
       </div>
 
       <PhotoUpload
         label="Driving licence — front"
-        required
+        required={DOCUMENTS_REQUIRED}
         value={licenseFront ? null : undefined}
         onChange={(blob) => {
           setLicenseFront(blob ? { file: blob, name: "licence-front.jpg" } : null);
@@ -316,7 +324,7 @@ export function DriverSetupForm({
 
       <PhotoUpload
         label="Driving licence — back"
-        required
+        required={DOCUMENTS_REQUIRED}
         value={licenseBack ? null : undefined}
         onChange={(blob) => {
           setLicenseBack(blob ? { file: blob, name: "licence-back.jpg" } : null);
@@ -329,7 +337,7 @@ export function DriverSetupForm({
 
       <PhotoUpload
         label="National ID"
-        required
+        required={DOCUMENTS_REQUIRED}
         value={nationalId ? null : undefined}
         onChange={(blob) => {
           setNationalId(blob ? { file: blob, name: "national-id.jpg" } : null);

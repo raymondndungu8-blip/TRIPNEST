@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { FadeIn } from "@/components/motion/motion";
-import { FullPageSpinner } from "@/components/ui/spinner";
+import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 import { useSession } from "@/components/providers/session-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { signInWithEmail, resetPassword, signInWithGoogle } from "@/lib/auth";
@@ -139,8 +139,8 @@ export default function LoginPage() {
     }
   }
 
-  if (loading) return <FullPageSpinner label="Loading…" />;
-  if (user) return <FullPageSpinner label="Redirecting…" />;
+  if (loading) return <DashboardSkeleton />;
+  if (user) return <DashboardSkeleton />;
 
   return (
     <AppShell withNav={false}>

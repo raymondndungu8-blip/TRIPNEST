@@ -9,7 +9,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Logo } from "@/components/brand/logo";
 import { FadeIn } from "@/components/motion/motion";
-import { FullPageSpinner } from "@/components/ui/spinner";
+import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 import { PhoneOtp } from "@/components/auth/phone-otp";
 import { DriverSetupForm } from "@/components/driver/driver-setup-form";
 
@@ -26,7 +26,7 @@ export default function DriverSignupPage() {
     if (!loading && driver) router.replace("/driver");
   }, [loading, driver, router]);
 
-  if (loading) return <FullPageSpinner label="Loading…" />;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <AppShell withNav={false}>

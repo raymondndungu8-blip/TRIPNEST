@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/providers/session-provider";
-import { FullPageSpinner } from "@/components/ui/spinner";
+import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -29,5 +29,5 @@ export default function AuthCallbackPage() {
     router.replace("/client");
   }, [loading, user, client, driver, router]);
 
-  return <FullPageSpinner label="Signing you in…" />;
+  return <DashboardSkeleton />;
 }

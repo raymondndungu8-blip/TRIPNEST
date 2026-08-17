@@ -7,6 +7,7 @@ import { useSession } from "@/components/providers/session-provider";
 import Slideshow, { slides, type TripNestSlide } from "@/components/ui/slideshow";
 import { Button } from "@/components/ui/button";
 import { LogoMark } from "@/components/brand/logo";
+import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -29,6 +30,10 @@ export default function LandingPage() {
     }
     if (user) router.replace("/auth/callback");
   }, [loading, user, client, driver, router]);
+
+  // While the session resolves, show the dashboard skeleton so returning users
+  // are taken straight to their dashboard without flashing the landing page.
+  if (loading) return <DashboardSkeleton />;
 
   function handleClient() {
     if (!loading) router.push("/client");
