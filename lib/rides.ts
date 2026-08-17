@@ -62,6 +62,8 @@ export function toClient(data: Record<string, unknown>): Client {
     email: data.email as string,
     avatar_url: (data.avatarUrl as string) ?? null,
     emergency_contact: (data.emergencyContact as string) ?? null,
+    mpesa_phone: (data.mpesaPhone as string) ?? null,
+    card_ready: data.cardReady === true,
     share_rides: data.shareRides as boolean,
     rating_avg: (data.ratingAvg as number) ?? null,
     rating_count: (data.ratingCount as number) ?? 0,

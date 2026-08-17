@@ -16,6 +16,10 @@ export interface Client {
   email: string;
   avatar_url: string | null;
   emergency_contact: string | null;
+  /** Preferred M-PESA number for IntaSend STK prompts. */
+  mpesa_phone: string | null;
+  /** Whether the user has enabled secure IntaSend card checkout. */
+  card_ready: boolean;
   share_rides: boolean;
   rating_avg: number | null;
   rating_count: number;

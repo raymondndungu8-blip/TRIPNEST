@@ -23,6 +23,8 @@ export async function ensureClientProfile(u: User): Promise<Client> {
     email: (u.email ?? "").toLowerCase(),
     avatarUrl: u.photoURL || null,
     emergencyContact: null,
+    mpesaPhone: null,
+    cardReady: false,
     shareRides: false,
     ratingAvg: null,
     ratingCount: 0,
